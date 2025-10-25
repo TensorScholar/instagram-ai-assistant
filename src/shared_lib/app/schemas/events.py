@@ -6,9 +6,9 @@ Pydantic schemas for event-driven communication between services.
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Union
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 class EventType(str, Enum):
@@ -40,21 +40,22 @@ class EventType(str, Enum):
 class BaseEvent(BaseModel):
     """Base event schema with common fields."""
     
-    event_id: UUID = Field(default_factory=lambda: UUID.uuid4())
+    event_id: UUID = Field(default_factory=uuid4)
     event_type: EventType
     tenant_id: UUID
-    correlation_id: UUID = Field(default_factory=lambda: UUID.uuid4())
+    correlation_id: UUID = Field(default_factory=uuid4)
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     source_service: str
     version: str = Field(default="1.0")
     
-    class Config:
-        """Pydantic configuration."""
-        use_enum_values = True
-        json_encoders = {
+    model_config = ConfigDict(
+        use_enum_values=True,
+        json_encoders={
             datetime: lambda v: v.isoformat(),
             UUID: lambda v: str(v)
-        }
+        },
+        populate_by_name=True,
+    )
 
 
 class InstagramDirectMessageReceived(BaseEvent):
@@ -74,10 +75,10 @@ class InstagramDirectMessageReceived(BaseEvent):
     is_business_message: bool = Field(default=True)
     reply_to_message_id: Optional[str] = None
     
-    @validator('message_text')
+    @field_validator('message_text')
     def validate_message_content(cls, v, values):
         """Validate that either text or media is present."""
-        if not v and not values.get('media_urls'):
+        if not v and not values.data.get('media_urls'):
             raise ValueError('Either message_text or media_urls must be provided')
         return v
 
@@ -104,7 +105,7 @@ class ProductSyncStarted(BaseEvent):
     event_type: EventType = Field(default=EventType.PRODUCT_SYNC_STARTED)
     
     # Sync metadata
-    sync_id: UUID = Field(default_factory=lambda: UUID.uuid4())
+    sync_id: UUID = Field(default_factory=uuid4)
     connector_type: str  # shopify, woocommerce, etc.
     total_products: int
     batch_size: int = Field(default=100)
@@ -142,7 +143,7 @@ class AIQueryReceived(BaseEvent):
     event_type: EventType = Field(default=EventType.AI_QUERY_RECEIVED)
     
     # Query details
-    query_id: UUID = Field(default_factory=lambda: UUID.uuid4())
+    query_id: UUID = Field(default_factory=uuid4)
     query_text: str
     query_type: str = Field(default="text")  # text, image, hybrid
     media_urls: List[str] = Field(default_factory=list)
