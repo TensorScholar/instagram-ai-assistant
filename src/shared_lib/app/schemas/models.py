@@ -22,47 +22,21 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import declarative_base, Mapped, mapped_column, relationship, DeclarativeBase
 from sqlalchemy.sql import func as sql_func
 
 
+from .mixins import TenantMixin, TimestampMixin
+
 # Base class for all models with async support
-Base = declarative_base()
+class Base(AsyncAttrs, DeclarativeBase):
+    __abstract__ = True
 
 
-class TimestampMixin:
-    """Mixin for timestamp fields."""
-    
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=sql_func.now(),
-        nullable=False
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        server_default=sql_func.now(),
-        onupdate=sql_func.now(),
-        nullable=False
-    )
-
-
-class TenantMixin:
-    """Mixin for tenant isolation."""
-    
-    tenant_id: Mapped[UUID] = mapped_column(
-        PostgresUUID(as_uuid=True),
-        ForeignKey("shared.tenants.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True
-    )
-
-
-class Tenant(Base, AsyncAttrs, TimestampMixin):
+class Tenant(Base, TimestampMixin):
     """Tenant model for multi-tenancy."""
     
     __tablename__ = "tenants"
-    __table_args__ = {"schema": "shared"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -71,7 +45,7 @@ class Tenant(Base, AsyncAttrs, TimestampMixin):
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     domain: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False, server_default='true')
     
     # Instagram configuration
     instagram_business_account_id: Mapped[Optional[str]] = mapped_column(
@@ -110,14 +84,14 @@ class Tenant(Base, AsyncAttrs, TimestampMixin):
         Index("idx_tenants_domain", "domain"),
         Index("idx_tenants_active", "is_active"),
         Index("idx_tenants_instagram_account", "instagram_business_account_id"),
+        {"schema": "shared"},
     )
 
 
-class Product(Base, AsyncAttrs, TimestampMixin, TenantMixin):
+class Product(Base, TimestampMixin, TenantMixin):
     """Product model for e-commerce products."""
     
     __tablename__ = "products"
-    __table_args__ = {"schema": "tenants"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -159,14 +133,14 @@ class Product(Base, AsyncAttrs, TimestampMixin, TenantMixin):
         Index("idx_products_category", "category"),
         Index("idx_products_available", "is_available"),
         Index("idx_products_price", "price"),
+        {"schema": "tenants"},
     )
 
 
-class InstagramUser(Base, AsyncAttrs, TimestampMixin, TenantMixin):
+class InstagramUser(Base, TimestampMixin, TenantMixin):
     """Instagram user model for tracking user interactions."""
     
     __tablename__ = "instagram_users"
-    __table_args__ = {"schema": "tenants"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -198,14 +172,14 @@ class InstagramUser(Base, AsyncAttrs, TimestampMixin, TenantMixin):
         Index("idx_instagram_users_tenant_user", "tenant_id", "instagram_user_id"),
         Index("idx_instagram_users_username", "username"),
         Index("idx_instagram_users_last_interaction", "last_interaction"),
+        {"schema": "tenants"},
     )
 
 
-class Conversation(Base, AsyncAttrs, TimestampMixin, TenantMixin):
+class Conversation(Base, TimestampMixin, TenantMixin):
     """Conversation model for tracking Instagram DM conversations."""
     
     __tablename__ = "conversations"
-    __table_args__ = {"schema": "tenants"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -247,14 +221,14 @@ class Conversation(Base, AsyncAttrs, TimestampMixin, TenantMixin):
         Index("idx_conversations_tenant_user", "tenant_id", "instagram_user_id"),
         Index("idx_conversations_status", "status"),
         Index("idx_conversations_last_message", "last_message_at"),
+        {"schema": "tenants"},
     )
 
 
-class Message(Base, AsyncAttrs, TimestampMixin, TenantMixin):
+class Message(Base, TimestampMixin, TenantMixin):
     """Message model for storing Instagram DM messages."""
     
     __tablename__ = "messages"
-    __table_args__ = {"schema": "tenants"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -303,14 +277,14 @@ class Message(Base, AsyncAttrs, TimestampMixin, TenantMixin):
         Index("idx_messages_sender_type", "sender_type"),
         Index("idx_messages_ai_processed", "ai_processed"),
         Index("idx_messages_created_at", "created_at"),
+        {"schema": "tenants"},
     )
 
 
-class EventLog(Base, AsyncAttrs, TimestampMixin, TenantMixin):
+class EventLog(Base, TimestampMixin, TenantMixin):
     """Event log model for tracking system events."""
     
     __tablename__ = "event_logs"
-    __table_args__ = {"schema": "shared"}
     
     id: Mapped[UUID] = mapped_column(
         PostgresUUID(as_uuid=True),
@@ -345,6 +319,7 @@ class EventLog(Base, AsyncAttrs, TimestampMixin, TenantMixin):
         Index("idx_event_logs_event_type", "event_type"),
         Index("idx_event_logs_processed", "processed"),
         Index("idx_event_logs_source_service", "source_service"),
+        {"schema": "shared"},
     )
 
 

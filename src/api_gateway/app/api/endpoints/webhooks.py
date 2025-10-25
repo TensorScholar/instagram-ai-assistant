@@ -5,6 +5,7 @@ FastAPI endpoints for handling Instagram webhooks and other integrations.
 
 import json
 import logging
+import traceback
 from typing import Any, Dict, Optional
 from uuid import UUID, uuid4
 
@@ -22,7 +23,7 @@ from shared_lib.app.utils.security import (
     TenantSecurity,
     get_webhook_security,
 )
-from .config import settings
+from ...core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +134,7 @@ async def handle_instagram_webhook(
         
         webhook_security = get_webhook_security()
         if not webhook_security.verify_instagram_webhook(
-            payload.json(), signature
+            raw_body.decode(), signature
         ):
             logger.warning("Instagram webhook signature verification failed")
             raise HTTPException(
@@ -142,7 +143,8 @@ async def handle_instagram_webhook(
             )
         
         # Process webhook entries
-        for entry in payload.entry:
+        for entry_data in payload.entry:
+            entry = WebhookEntry.model_validate(entry_data)
             await _process_webhook_entry(entry)
         
         logger.info("Instagram webhook processed successfully")
@@ -151,8 +153,12 @@ async def handle_instagram_webhook(
             status_code=status.HTTP_200_OK
         )
         
+    except HTTPException as e:
+        # Re-raise HTTPException to be handled by FastAPI's exception handling
+        raise e
     except Exception as e:
         logger.error(f"Error processing Instagram webhook: {e}")
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error"
