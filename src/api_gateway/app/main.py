@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from .api.endpoints import webhooks
 from .core.config import settings
+from shared_lib.app.utils.security import initialize_security
 
 # Configure logging
 logging.basicConfig(
@@ -39,7 +40,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     
     # TODO: Initialize database connection
     # TODO: Initialize RabbitMQ connection
-    # TODO: Initialize security utilities
+    initialize_security(
+        settings.secret_key,
+        settings.instagram_app_secret,
+        None
+    )
     
     logger.info("API Gateway service started successfully")
     
