@@ -39,6 +39,24 @@ rabbitmq:
       cpu: 500m
       memory: 512Mi
 
+# Redis Cache & Celery Backend Configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "CHANGE_ME_REDIS_PASSWORD"
+  master:
+    persistence:
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
 # Vector Database Configuration
 milvus:
   enabled: true
@@ -129,6 +147,8 @@ apiGateway:
     RABBITMQ_HOST: "rabbitmq"
     RABBITMQ_PORT: "5672"
     RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
     SECRET_KEY: "CHANGE_ME_SECRET_KEY"
     INSTAGRAM_APP_ID: "CHANGE_ME_INSTAGRAM_APP_ID"
     INSTAGRAM_APP_SECRET: "CHANGE_ME_INSTAGRAM_APP_SECRET"
@@ -167,6 +187,8 @@ intelligenceWorker:
     RABBITMQ_HOST: "rabbitmq"
     RABBITMQ_PORT: "5672"
     RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
     MILVUS_HOST: "milvus"
     MILVUS_PORT: "19530"
     GEMINI_API_KEY: "CHANGE_ME_GEMINI_API_KEY"
@@ -209,6 +231,8 @@ ingestionWorker:
     RABBITMQ_HOST: "rabbitmq"
     RABBITMQ_PORT: "5672"
     RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
     MILVUS_HOST: "milvus"
     MILVUS_PORT: "19530"
   livenessProbe:

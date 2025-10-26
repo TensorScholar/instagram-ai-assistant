@@ -25,6 +25,10 @@ dependencies:
     version: 11.x.x
     repository: https://charts.bitnami.com/bitnami
     condition: rabbitmq.enabled
+  - name: redis
+    version: 18.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
   - name: milvus
     version: 4.x.x
     repository: https://milvus-io.github.io/milvus-helm
