@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "aura-platform.fullname" . }}-intelligence-worker
+  namespace: {{ .Values.global.namespace | default "aura-platform" }}
+  labels:
+    app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/component: intelligence-worker
+spec:
+  replicas: {{ .Values.intelligenceWorker.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: intelligence-worker
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+        app.kubernetes.io/managed-by: {{ .Release.Service }}
+        app.kubernetes.io/component: intelligence-worker
+    spec:
+      serviceAccountName: {{ include "aura-platform.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      containers:
+        - name: intelligence-worker
+          image: "{{ .Values.intelligenceWorker.image.repository }}:{{ .Values.intelligenceWorker.image.tag }}"
+          imagePullPolicy: {{ .Values.intelligenceWorker.image.pullPolicy }}
+          ports:
+            - name: health
+              containerPort: 8000
+              protocol: TCP
+          env:
+            - name: POSTGRES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: POSTGRES_HOST
+            - name: POSTGRES_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: POSTGRES_PORT
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: POSTGRES_DB
+            - name: POSTGRES_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-secrets
+                  key: POSTGRES_PASSWORD
+            - name: RABBITMQ_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: RABBITMQ_HOST
+            - name: RABBITMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: RABBITMQ_PORT
+            - name: RABBITMQ_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: RABBITMQ_USER
+            - name: RABBITMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-secrets
+                  key: RABBITMQ_PASSWORD
+            - name: MILVUS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: MILVUS_HOST
+            - name: MILVUS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: MILVUS_PORT
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-secrets
+                  key: GEMINI_API_KEY
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-secrets
+                  key: OPENAI_API_KEY
+          livenessProbe:
+            {{- toYaml .Values.intelligenceWorker.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.intelligenceWorker.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.intelligenceWorker.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}

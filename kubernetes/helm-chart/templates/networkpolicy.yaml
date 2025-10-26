@@ -1,0 +1,41 @@
+{{- if .Values.networkPolicy.enabled -}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "aura-platform.fullname" . }}-network-policy
+  namespace: {{ .Values.global.namespace | default "aura-platform" }}
+  labels:
+    app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: {{ .Values.global.namespace | default "aura-platform" }}
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+  egress:
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: {{ .Values.global.namespace | default "aura-platform" }}
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+          app.kubernetes.io/instance: {{ .Release.Name }}
+  - to: []
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53
+{{- end }}
