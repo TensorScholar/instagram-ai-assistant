@@ -6,7 +6,8 @@ Async database connection and operation utilities with tenant isolation.
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from functools import wraps
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union, Callable, Awaitable
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
@@ -102,6 +103,109 @@ class DatabaseManager:
         """Close the database engine."""
         await self.engine.dispose()
         logger.info("Database engine closed")
+
+
+def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    """
+    Decorator for managing database transactions.
+    
+    This decorator ensures that database operations are executed within a transaction.
+    If the function completes successfully, the transaction is committed.
+    If an exception is raised, the transaction is rolled back.
+    
+    Args:
+        func: The async function to wrap with transaction management
+        
+    Returns:
+        Wrapped function with transaction management
+        
+    Example:
+        @transactional
+        async def create_product_with_variants(session: AsyncSession, tenant_id: UUID, product_data: dict):
+            # This function will be executed within a transaction
+            product = await create_product(session, tenant_id, product_data)
+            await create_variants(session, product.id, product_data['variants'])
+            return product
+    """
+    @wraps(func)
+    async def wrapper(*args, **kwargs):
+        # Find the session parameter in the function arguments
+        session = None
+        for arg in args:
+            if isinstance(arg, AsyncSession):
+                session = arg
+                break
+        
+        if not session:
+            # Look in kwargs
+            session = kwargs.get('session')
+        
+        if not session:
+            raise ValueError(
+                f"Function {func.__name__} decorated with @transactional must have "
+                "an AsyncSession parameter named 'session'"
+            )
+        
+        # Check if we're already in a transaction
+        if session.in_transaction():
+            logger.debug(f"Function {func.__name__} already in transaction, executing directly")
+            return await func(*args, **kwargs)
+        
+        # Start a new transaction
+        async with session.begin():
+            try:
+                logger.debug(f"Starting transaction for function {func.__name__}")
+                result = await func(*args, **kwargs)
+                logger.debug(f"Transaction completed successfully for function {func.__name__}")
+                return result
+            except Exception as e:
+                logger.error(f"Transaction failed for function {func.__name__}: {e}")
+                # The transaction will be automatically rolled back by the context manager
+                raise
+    
+    return wrapper
+
+
+class TransactionalContext:
+    """
+    Context manager for manual transaction control.
+    
+    This provides more granular control over transaction boundaries
+    when the @transactional decorator is not suitable.
+    
+    Example:
+        async with TransactionalContext(session) as tx:
+            await create_product(session, tenant_id, product_data)
+            await create_variants(session, product.id, variants_data)
+            # Transaction will be committed automatically
+    """
+    
+    def __init__(self, session: AsyncSession):
+        """
+        Initialize transactional context.
+        
+        Args:
+            session: Async database session
+        """
+        self.session = session
+        self.transaction = None
+    
+    async def __aenter__(self):
+        """Enter the transactional context."""
+        if not self.session.in_transaction():
+            self.transaction = self.session.begin()
+            await self.transaction.__aenter__()
+            logger.debug("Started manual transaction")
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Exit the transactional context."""
+        if self.transaction:
+            await self.transaction.__aexit__(exc_type, exc_val, exc_tb)
+            if exc_type is None:
+                logger.debug("Manual transaction committed")
+            else:
+                logger.debug("Manual transaction rolled back due to exception")
 
 
 class TenantAwareRepository:
