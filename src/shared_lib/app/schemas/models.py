@@ -59,8 +59,8 @@ class Tenant(Base, TimestampMixin):
     ecommerce_platform: Mapped[Optional[str]] = mapped_column(
         String(100), nullable=True
     )
-    ecommerce_credentials: Mapped[Optional[Dict[str, Any]]] = mapped_column(
-        JSON, nullable=True
+    secrets_path: Mapped[Optional[str]] = mapped_column(
+        String(500), nullable=True, comment="Vault path for tenant-specific secrets"
     )
     
     # AI configuration
