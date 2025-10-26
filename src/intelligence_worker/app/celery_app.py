@@ -1,6 +1,9 @@
 """
 Aura Platform - Intelligence Worker Celery Application
-Celery application configuration for the Intelligence Worker service.
+
+Configures the Celery distributed task queue for the Intelligence Worker service.
+Handles AI processing tasks with resilience patterns, separate queues for
+different priority levels, and comprehensive error handling.
 """
 
 import logging

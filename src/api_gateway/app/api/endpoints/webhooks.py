@@ -1,6 +1,9 @@
 """
 Aura Platform - API Gateway Webhook Endpoints
-FastAPI endpoints for handling Instagram webhooks and other integrations.
+
+Handles incoming webhooks from Instagram and other integrated platforms.
+Provides secure webhook verification, payload validation, and event processing
+for the Aura AI assistant platform.
 """
 
 import json

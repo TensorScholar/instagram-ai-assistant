@@ -30,12 +30,21 @@ T = TypeVar("T", bound=Base)
 
 
 class DatabaseTransactionError(Exception):
-    """Exception raised when database transaction fails due to network issues."""
+    """Raised when database transaction fails due to network connectivity issues.
+    
+    This exception is raised when the @transactional decorator encounters
+    network-related database errors and performs an explicit rollback.
+    """
     pass
 
 
 class DatabaseManager:
-    """Database manager for async operations with tenant isolation."""
+    """Manages async database connections with tenant isolation and connection pooling.
+    
+    This class provides a centralized way to manage database connections,
+    sessions, and operations with proper connection pooling and tenant
+    isolation support for multi-tenant applications.
+    """
     
     def __init__(
         self,
