@@ -1,268 +1,210 @@
 # Aura
 
-> **AI-powered Instagram commerce assistant that actually works**
+<div align="center">
 
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Aura Logo](https://img.shields.io/badge/Aura-AI%20Assistant-blue?style=for-the-badge&logo=sparkles)
 
-Transform Instagram DMs into intelligent shopping experiences. Aura handles product recommendations, customer support, and order management through conversational AI that understands context and scales automatically.
+**AI-powered Instagram commerce assistant that actually works**
 
-## Architecture Flow
+[![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat-square&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=flat-square&logo=docker&logoColor=white)](https://docker.com)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/TensorScholar/instagram-ai-assistant?style=flat-square&logo=github)](https://github.com/TensorScholar/instagram-ai-assistant)
 
-### Interactive Architecture Diagram
+</div>
+
+---
+
+## 🎯 Overview
+
+Aura transforms Instagram DMs into intelligent shopping experiences. Built for scale, security, and reliability.
+
+**What it does:**
+- 🤖 **Smart Conversations** - AI that understands your products and customers
+- 🏢 **Multi-Tenant** - Secure isolation for multiple businesses
+- 🛡️ **Production Ready** - Circuit breakers, retries, monitoring
+- 📈 **Auto-Scaling** - Handles thousands of conversations
+
+---
+
+## 🏗️ Architecture
+
+<div align="center">
 
 ```mermaid
-graph TB
-    subgraph "Instagram Platform"
-        IG[Instagram Webhooks]
-    end
-    
-    subgraph "Aura Platform"
-        API[API Gateway<br/>FastAPI]
-        RMQ[RabbitMQ<br/>Message Broker]
-        
-        subgraph "Workers"
-            IW[Intelligence Worker<br/>AI Processing]
-            EW[Ingestion Worker<br/>Data Sync]
-        end
-        
-        subgraph "Data Layer"
-            PG[(PostgreSQL<br/>Tenant Data)]
-            MV[(Milvus<br/>Vector Search)]
-            RD[(Redis<br/>Cache & Locks)]
-        end
-        
-        subgraph "Security"
-            VLT[HashiCorp Vault<br/>Secrets Management]
-        end
-    end
-    
-    subgraph "AI Services"
-        GEM[Google Gemini<br/>Primary LLM]
-        OAI[OpenAI<br/>Fallback LLM]
-    end
-    
-    IG -->|Webhook| API
-    API -->|Validate & Route| RMQ
-    RMQ -->|Process Message| IW
-    RMQ -->|Sync Products| EW
-    
-    IW -->|Query Context| MV
-    IW -->|Cache Results| RD
-    IW -->|Store Data| PG
-    IW -->|Generate Response| GEM
-    GEM -.->|Fallback| OAI
-    
-    EW -->|Store Products| PG
-    EW -->|Create Embeddings| MV
-    
-    VLT -->|Secrets| API
-    VLT -->|Secrets| IW
-    VLT -->|Secrets| EW
-    
-    IW -->|AI Response| IG
-    
-    style IG fill:#E4405F,stroke:#fff,color:#fff
-    style API fill:#00D4AA,stroke:#fff,color:#fff
-    style RMQ fill:#FF6600,stroke:#fff,color:#fff
-    style IW fill:#4A90E2,stroke:#fff,color:#fff
-    style EW fill:#4A90E2,stroke:#fff,color:#fff
-    style PG fill:#7B68EE,stroke:#fff,color:#fff
-    style MV fill:#FF69B4,stroke:#fff,color:#fff
-    style RD fill:#DC143C,stroke:#fff,color:#fff
-    style VLT fill:#8B4513,stroke:#fff,color:#fff
-    style GEM fill:#4285F4,stroke:#fff,color:#fff
-    style OAI fill:#00A67E,stroke:#fff,color:#fff
+flowchart LR
+    A[📱 Instagram] --> B[🚪 API Gateway]
+    B --> C[📨 RabbitMQ]
+    C --> D[🧠 AI Worker]
+    C --> E[📊 Ingestion Worker]
+    D --> F[💾 PostgreSQL]
+    D --> G[🔍 Milvus]
+    D --> H[⚡ Redis]
+    E --> F
+    E --> G
+    I[🔐 Vault] --> B
+    I --> D
+    I --> E
+    D --> A
 ```
 
-*Interactive diagram showing complete data flow from Instagram webhooks through AI processing to responses*
+</div>
 
-## Why Aura?
+**Flow:** Instagram webhook → API Gateway → Message Queue → AI Processing → Response
 
-Instagram is where people discover products, but most businesses still handle DMs manually. Aura changes that by:
+---
 
-- **Understanding context** - Knows your products, inventory, and customer history
-- **Scaling automatically** - Handles thousands of conversations without breaking
-- **Staying secure** - Multi-tenant architecture keeps customer data isolated
-- **Learning continuously** - Gets better with every interaction
-
-## Quick Start
+## 🚀 Quick Start
 
 ```bash
-# Clone and start
+# 1. Clone the repository
 git clone https://github.com/TensorScholar/instagram-ai-assistant.git
 cd instagram-ai-assistant
+
+# 2. Start the platform
 make dev-up
 
-# That's it! Your AI assistant is running locally
+# 3. Verify it's running
+make health-check
 ```
 
-## What's Inside
+**That's it!** Your AI assistant is now running locally.
+
+---
+
+## 📁 Project Structure
 
 ```
 src/
-├── api_gateway/          # FastAPI webhook handler
-├── intelligence_worker/  # AI processing with Gemini + fallbacks
-├── ingestion_worker/     # Product catalog sync
-└── shared_lib/          # Common utilities, models, AI clients
+├── api_gateway/          # Webhook handler (FastAPI)
+├── intelligence_worker/  # AI processing (Celery)
+├── ingestion_worker/     # Data sync (Celery)
+└── shared_lib/          # Common utilities
 ```
 
-## Tech Stack
+---
 
-- **Backend**: Python 3.12, FastAPI, Celery
-- **AI**: Google Gemini (primary), OpenAI (fallback)
-- **Data**: PostgreSQL, Milvus (vector search), Redis
-- **Infrastructure**: Docker, Kubernetes, RabbitMQ
-- **Security**: HashiCorp Vault, tenant isolation
+## 🛠️ Tech Stack
 
-## Features
+| Category | Technologies |
+|----------|-------------|
+| **Backend** | Python 3.12, FastAPI, Celery |
+| **AI** | Google Gemini, OpenAI (fallback) |
+| **Data** | PostgreSQL, Milvus, Redis |
+| **Infrastructure** | Docker, Kubernetes, RabbitMQ |
+| **Security** | HashiCorp Vault |
 
-### 🤖 Smart Conversations
-- RAG-powered responses using your product catalog
-- Context-aware recommendations based on customer history
-- Multi-language support with proper fallbacks
+---
 
-### 🏢 Multi-Tenant Ready
-- Complete data isolation between businesses
-- Tenant-specific AI models and configurations
-- Secure secret management per tenant
+## ⚙️ Configuration
 
-### 🛡️ Production Hardened
-- Circuit breakers prevent cascade failures
-- Automatic retries with exponential backoff
-- Dead letter queues for problematic messages
-- Comprehensive monitoring and alerting
-
-### 📈 Scales Automatically
-- Horizontal scaling with Kubernetes
-- Separate queues for real-time vs bulk processing
-- Connection pooling and resource optimization
-
-## Development
+Create a `.env` file:
 
 ```bash
-# Start everything
-make dev-up
+# Database
+DATABASE_URL=postgresql://user:pass@localhost/aura
 
-# Run tests
-make test
-
-# Code quality
-make lint
-
-# Clean up
-make clean
-```
-
-## Testing
-
-We test everything:
-
-```bash
-# Unit tests
-pytest src/ -v
-
-# Integration tests  
-pytest tests/integration/ -v
-
-# Stress tests (simulates 100x load)
-pytest tests/stress/ -v
-
-# Full validation suite
-pytest tests/validation/ -v
-```
-
-## Deployment
-
-Production deployment is Kubernetes-ready:
-
-```bash
-# Build images
-make build
-
-# Deploy with Helm
-helm install aura ./kubernetes/helm-chart
-
-# Monitor
-kubectl get pods -n aura-platform
-```
-
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed setup instructions.
-
-## Configuration
-
-Environment variables control everything:
-
-```bash
-# Required
-DATABASE_URL=postgresql://...
-REDIS_URL=redis://...
-RABBITMQ_URL=amqp://...
+# Message Queue
+RABBITMQ_URL=amqp://user:pass@localhost:5672
 
 # AI APIs
-GEMINI_API_KEY=your_key_here
-OPENAI_API_KEY=fallback_key_here
+GEMINI_API_KEY=your_gemini_key
+OPENAI_API_KEY=your_openai_key
 
 # Instagram
 INSTAGRAM_APP_ID=your_app_id
 INSTAGRAM_APP_SECRET=your_secret
 ```
 
-## Contributing
+---
 
-We welcome contributions! Here's how:
+## 🧪 Testing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+```bash
+# Run all tests
+make test
 
-## Architecture
-
+# Specific test types
+pytest src/ -v                    # Unit tests
+pytest tests/integration/ -v      # Integration tests
+pytest tests/validation/ -v       # Validation tests
 ```
-Instagram Webhooks → API Gateway → RabbitMQ → AI Workers → Response
-                                        ↓
-                                   Product Catalog
-                                        ↓
-                                   Vector Search (Milvus)
-```
-
-The system processes Instagram messages through a resilient pipeline that can handle failures gracefully and scale to thousands of concurrent conversations.
-
-## Performance
-
-- **Response time**: < 2 seconds for typical queries
-- **Throughput**: 1000+ messages/minute per worker
-- **Availability**: 99.9% uptime with proper configuration
-- **Scalability**: Linear scaling with additional workers
-
-## Security
-
-- All secrets managed through HashiCorp Vault
-- Tenant data completely isolated
-- Webhook signature verification
-- Input validation and sanitization
-- Audit logging for all operations
-
-## Monitoring
-
-Built-in metrics for:
-- Queue depths and processing times
-- AI API response times and error rates
-- Database connection pool utilization
-- Circuit breaker states
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Author
-
-Built with ❤️ by [Mohammad Atashi](https://github.com/TensorScholar)
 
 ---
 
-**Star this repo if you find it useful!** ⭐
+## 🚢 Deployment
+
+### Local Development
+```bash
+make dev-up    # Start all services
+make dev-down  # Stop all services
+```
+
+### Production (Kubernetes)
+```bash
+make build                           # Build images
+helm install aura ./kubernetes/helm-chart  # Deploy
+kubectl get pods -n aura-platform   # Monitor
+```
+
+---
+
+## 📊 Performance
+
+- **Response Time**: < 2 seconds
+- **Throughput**: 1000+ messages/minute
+- **Availability**: 99.9% uptime
+- **Scalability**: Linear scaling
+
+---
+
+## 🔒 Security
+
+- ✅ Multi-tenant data isolation
+- ✅ HashiCorp Vault integration
+- ✅ Webhook signature verification
+- ✅ Input validation & sanitization
+- ✅ Audit logging
+
+---
+
+## 📈 Monitoring
+
+Built-in metrics for:
+- Queue depths and processing times
+- AI API response times and errors
+- Database connection pool usage
+- Circuit breaker states
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👨‍💻 Author
+
+**Mohammad Atashi** - [@TensorScholar](https://github.com/TensorScholar)
+
+---
+
+<div align="center">
+
+**⭐ Star this repo if you find it useful!**
+
+Made with ❤️ for the future of AI-powered commerce
+
+</div>
