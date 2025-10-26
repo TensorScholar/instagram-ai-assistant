@@ -147,6 +147,42 @@ helm install aura ./kubernetes/helm-chart
 - Health check endpoints
 - Distributed tracing with correlation IDs
 
+## ⚡ Scaling Configuration
+
+The Aura platform is designed for horizontal scaling with configurable resource limits. Key scaling parameters can be adjusted via environment variables:
+
+### Database Connection Pool
+```bash
+# Database connection pool settings
+DB_POOL_SIZE=50              # Base connection pool size
+DB_MAX_OVERFLOW=100          # Maximum overflow connections
+DB_POOL_RECYCLE=1800         # Connection recycle time (30 minutes)
+```
+
+### Celery Worker Concurrency
+```bash
+# Intelligence Worker scaling
+INTELLIGENCE_WORKER_CONCURRENCY=20    # Worker concurrency
+CELERY_WORKER_PREFETCH_MULTIPLIER=1   # Prefetch multiplier
+CELERY_WORKER_MAX_TASKS_PER_CHILD=1000 # Max tasks per worker process
+```
+
+### Queue Configuration
+The platform uses separate queues for different operation types:
+- **realtime_queue**: High-priority messages (limit: 1000 messages)
+- **bulk_queue**: Low-priority bulk operations (limit: 5000 messages)
+
+### Kubernetes Resource Limits
+Resource quotas are enforced at the namespace level:
+- **CPU Limit**: 8 cores total, 2 cores per pod
+- **Memory Limit**: 16Gi total, 4Gi per pod
+- **Pod Limit**: 20 pods maximum
+
+### Rate Limiting
+- **API Gateway**: 60 requests per minute per IP
+- **Back-Pressure**: Automatic throttling when queues exceed 5000 messages
+- **Health Checks**: Bypass all rate limiting and back-pressure mechanisms
+
 ## 🤝 Contributing
 
 1. Follow the coding standards outlined in this README

@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.pool import NullPool, QueuePool
 
-from .schemas.models import Base, TenantMixin
+from .core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,8 +35,8 @@ class DatabaseManager:
         self,
         database_url: str,
         echo: bool = False,
-        pool_size: int = 5,
-        max_overflow: int = 10,
+        pool_size: Optional[int] = None,
+        max_overflow: Optional[int] = None,
     ):
         """
         Initialize the database manager.
@@ -44,21 +44,25 @@ class DatabaseManager:
         Args:
             database_url: The database URL
             echo: Whether to echo SQL statements
-            pool_size: Connection pool size
-            max_overflow: Maximum overflow connections
+            pool_size: Connection pool size (defaults to settings)
+            max_overflow: Maximum overflow connections (defaults to settings)
         """
         self.database_url = database_url
         self.echo = echo
+        
+        # Use settings defaults if not provided
+        effective_pool_size = pool_size if pool_size is not None else settings.db_pool_size
+        effective_max_overflow = max_overflow if max_overflow is not None else settings.db_max_overflow
         
         # Create async engine
         self.engine: AsyncEngine = create_async_engine(
             database_url,
             echo=echo,
             poolclass=QueuePool,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            pool_pre_ping=True,
-            pool_recycle=3600,
+            pool_size=effective_pool_size,
+            max_overflow=effective_max_overflow,
+            pool_pre_ping=settings.db_pool_pre_ping,
+            pool_recycle=settings.db_pool_recycle,
         )
         
         # Create session factory

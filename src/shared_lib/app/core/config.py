@@ -1,6 +1,6 @@
 """
-Aura Platform - Intelligence Worker Configuration
-Configuration management for the Intelligence Worker service.
+Aura Platform - Shared Library Configuration
+Configuration management for the shared library components.
 """
 
 import logging
@@ -8,35 +8,17 @@ from typing import List, Optional
 
 from pydantic import BaseSettings, Field
 
+logger = logging.getLogger(__name__)
+
 
 class Settings(BaseSettings):
-    """Intelligence Worker configuration settings."""
+    """Shared library configuration settings."""
     
     # Application settings
-    app_name: str = Field(default="Aura Intelligence Worker", env="APP_NAME")
+    app_name: str = Field(default="Aura Platform", env="APP_NAME")
     app_version: str = Field(default="0.1.0", env="APP_VERSION")
     debug: bool = Field(default=False, env="DEBUG")
     environment: str = Field(default="development", env="ENVIRONMENT")
-    
-    # Celery settings
-    celery_broker_url: str = Field(env="CELERY_BROKER_URL")
-    celery_result_backend: str = Field(env="CELERY_RESULT_BACKEND")
-    celery_task_serializer: str = Field(default="json", env="CELERY_TASK_SERIALIZER")
-    celery_result_serializer: str = Field(default="json", env="CELERY_RESULT_SERIALIZER")
-    celery_accept_content: List[str] = Field(default=["json"], env="CELERY_ACCEPT_CONTENT")
-    celery_timezone: str = Field(default="UTC", env="CELERY_TIMEZONE")
-    celery_enable_utc: bool = Field(default=True, env="CELERY_ENABLE_UTC")
-    
-    # Redis settings
-    redis_host: str = Field(default="redis", env="REDIS_HOST")
-    redis_port: int = Field(default=6379, env="REDIS_PORT")
-    redis_password: str = Field(env="REDIS_PASSWORD")
-    redis_db: int = Field(default=0, env="REDIS_DB")
-    
-    # Worker settings
-    worker_concurrency: int = Field(default=20, env="INTELLIGENCE_WORKER_CONCURRENCY")
-    worker_prefetch_multiplier: int = Field(default=1, env="CELERY_WORKER_PREFETCH_MULTIPLIER")
-    worker_max_tasks_per_child: int = Field(default=1000, env="CELERY_WORKER_MAX_TASKS_PER_CHILD")
     
     # Database settings
     database_url: str = Field(env="DATABASE_URL")
@@ -45,6 +27,25 @@ class Settings(BaseSettings):
     postgres_db: str = Field(default="aura_platform", env="POSTGRES_DB")
     postgres_user: str = Field(default="aura_user", env="POSTGRES_USER")
     postgres_password: str = Field(env="POSTGRES_PASSWORD")
+    
+    # Database connection pool settings
+    db_pool_size: int = Field(default=50, env="DB_POOL_SIZE")
+    db_max_overflow: int = Field(default=100, env="DB_MAX_OVERFLOW")
+    db_pool_pre_ping: bool = Field(default=True, env="DB_POOL_PRE_PING")
+    db_pool_recycle: int = Field(default=1800, env="DB_POOL_RECYCLE")  # 30 minutes
+    
+    # Redis settings
+    redis_host: str = Field(default="redis", env="REDIS_HOST")
+    redis_port: int = Field(default=6379, env="REDIS_PORT")
+    redis_password: str = Field(env="REDIS_PASSWORD")
+    redis_db: int = Field(default=0, env="REDIS_DB")
+    
+    # RabbitMQ settings
+    rabbitmq_host: str = Field(default="rabbitmq", env="RABBITMQ_HOST")
+    rabbitmq_port: int = Field(default=5672, env="RABBITMQ_PORT")
+    rabbitmq_username: str = Field(default="aura_user", env="RABBITMQ_USERNAME")
+    rabbitmq_password: str = Field(env="RABBITMQ_PASSWORD")
+    rabbitmq_vhost: str = Field(default="aura_vhost", env="RABBITMQ_VHOST")
     
     # Vector database settings
     milvus_host: str = Field(default="milvus", env="MILVUS_HOST")
@@ -58,6 +59,11 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4-turbo-preview", env="OPENAI_MODEL")
     
+    # Security settings
+    secret_key: str = Field(env="SECRET_KEY")
+    jwt_algorithm: str = Field(default="HS256", env="JWT_ALGORITHM")
+    jwt_access_token_expire_minutes: int = Field(default=30, env="JWT_ACCESS_TOKEN_EXPIRE_MINUTES")
+    
     # Logging settings
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
     log_format: str = Field(default="json", env="LOG_FORMAT")
@@ -70,12 +76,3 @@ class Settings(BaseSettings):
 
 # Global settings instance
 settings = Settings()
-
-# Configure logging
-logging.basicConfig(
-    level=getattr(logging, settings.log_level.upper()),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-
-logger = logging.getLogger(__name__)
-logger.info(f"Intelligence Worker configuration loaded for {settings.environment} environment")

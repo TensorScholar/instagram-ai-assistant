@@ -57,18 +57,37 @@ celery_app.conf.update(
     },
 )
 
-# Configure task routes
+# Configure task routes with separate queues
 celery_app.conf.task_routes = {
-    "app.tasks.message_processing.*": {"queue": "intelligence_queue"},
-    "app.tasks.resilient_ai_processing.*": {"queue": "intelligence_queue"},
+    "app.tasks.message_processing.*": {"queue": "realtime_queue"},
+    "app.tasks.resilient_ai_processing.*": {"queue": "realtime_queue"},
+    "app.tasks.bulk_ingestion.*": {"queue": "bulk_queue"},
 }
 
-# Configure queues
-celery_app.conf.task_default_queue = "intelligence_queue"
+# Configure separate queues for different priorities
+celery_app.conf.task_default_queue = "realtime_queue"
 celery_app.conf.task_queues = {
-    "intelligence_queue": {
-        "exchange": "intelligence_exchange",
-        "routing_key": "intelligence",
+    "realtime_queue": {
+        "exchange": "aura_events",
+        "routing_key": "realtime",
+        "queue_arguments": {
+            "x-max-length": 1000,  # Limit queue size
+            "x-message-ttl": 300000,  # 5 minute TTL
+            "x-max-retries": 3,
+            "x-dead-letter-exchange": "dlx",
+            "x-dead-letter-routing-key": "failed",
+        }
+    },
+    "bulk_queue": {
+        "exchange": "aura_events", 
+        "routing_key": "bulk",
+        "queue_arguments": {
+            "x-max-length": 5000,  # Larger limit for bulk operations
+            "x-message-ttl": 1800000,  # 30 minute TTL
+            "x-max-retries": 5,
+            "x-dead-letter-exchange": "dlx",
+            "x-dead-letter-routing-key": "failed",
+        }
     }
 }
 
