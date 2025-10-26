@@ -1,6 +1,10 @@
 """
 Aura Platform - Resilient LLM Client
-Resilient LLM integration with retry, circuit breaker, and fallback patterns.
+
+Provides fault-tolerant integration with Large Language Models (LLMs) including
+Google Gemini and OpenAI GPT. Implements retry mechanisms, circuit breakers,
+and intelligent fallback patterns to ensure reliable AI-powered responses
+even under adverse network conditions or API failures.
 """
 
 import asyncio
@@ -31,22 +35,38 @@ logger = logging.getLogger(__name__)
 
 
 class LLMError(Exception):
-    """Base exception for LLM operations."""
+    """Base exception class for all LLM-related operations.
+    
+    This serves as the parent class for all LLM-specific exceptions,
+    allowing for centralized error handling and logging.
+    """
     pass
 
 
 class LLMTimeoutError(LLMError):
-    """Exception raised when LLM request times out."""
+    """Raised when an LLM request exceeds the configured timeout duration.
+    
+    This typically indicates network latency issues or LLM service
+    performance degradation.
+    """
     pass
 
 
 class LLMRateLimitError(LLMError):
-    """Exception raised when LLM rate limit is exceeded."""
+    """Raised when LLM API rate limits are exceeded.
+    
+    Indicates that the application has exceeded the allowed number
+    of requests per minute/hour for the LLM service.
+    """
     pass
 
 
 class LLMServiceUnavailableError(LLMError):
-    """Exception raised when LLM service is unavailable."""
+    """Raised when the LLM service is temporarily unavailable.
+    
+    This indicates server-side issues with the LLM provider
+    that prevent request processing.
+    """
     pass
 
 
