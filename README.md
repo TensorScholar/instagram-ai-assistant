@@ -11,9 +11,75 @@ Transform Instagram DMs into intelligent shopping experiences. Aura handles prod
 
 ## Architecture Flow
 
-![Aura Architecture Flow](https://github.com/TensorScholar/instagram-ai-assistant/assets/aura-architecture-flow.gif)
+![Aura Flow](aura-flow-small.gif)
 
-*Watch the animated flow: Instagram webhooks → AI processing → intelligent responses*
+*Watch the animated flow: Instagram → API Gateway → RabbitMQ → AI Workers → Response*
+
+### Interactive Architecture Diagram
+
+```mermaid
+graph TB
+    subgraph "Instagram Platform"
+        IG[Instagram Webhooks]
+    end
+    
+    subgraph "Aura Platform"
+        API[API Gateway<br/>FastAPI]
+        RMQ[RabbitMQ<br/>Message Broker]
+        
+        subgraph "Workers"
+            IW[Intelligence Worker<br/>AI Processing]
+            EW[Ingestion Worker<br/>Data Sync]
+        end
+        
+        subgraph "Data Layer"
+            PG[(PostgreSQL<br/>Tenant Data)]
+            MV[(Milvus<br/>Vector Search)]
+            RD[(Redis<br/>Cache & Locks)]
+        end
+        
+        subgraph "Security"
+            VLT[HashiCorp Vault<br/>Secrets Management]
+        end
+    end
+    
+    subgraph "AI Services"
+        GEM[Google Gemini<br/>Primary LLM]
+        OAI[OpenAI<br/>Fallback LLM]
+    end
+    
+    IG -->|Webhook| API
+    API -->|Validate & Route| RMQ
+    RMQ -->|Process Message| IW
+    RMQ -->|Sync Products| EW
+    
+    IW -->|Query Context| MV
+    IW -->|Cache Results| RD
+    IW -->|Store Data| PG
+    IW -->|Generate Response| GEM
+    GEM -.->|Fallback| OAI
+    
+    EW -->|Store Products| PG
+    EW -->|Create Embeddings| MV
+    
+    VLT -->|Secrets| API
+    VLT -->|Secrets| IW
+    VLT -->|Secrets| EW
+    
+    IW -->|AI Response| IG
+    
+    style IG fill:#E4405F,stroke:#fff,color:#fff
+    style API fill:#00D4AA,stroke:#fff,color:#fff
+    style RMQ fill:#FF6600,stroke:#fff,color:#fff
+    style IW fill:#4A90E2,stroke:#fff,color:#fff
+    style EW fill:#4A90E2,stroke:#fff,color:#fff
+    style PG fill:#7B68EE,stroke:#fff,color:#fff
+    style MV fill:#FF69B4,stroke:#fff,color:#fff
+    style RD fill:#DC143C,stroke:#fff,color:#fff
+    style VLT fill:#8B4513,stroke:#fff,color:#fff
+    style GEM fill:#4285F4,stroke:#fff,color:#fff
+    style OAI fill:#00A67E,stroke:#fff,color:#fff
+```
 
 ## Why Aura?
 
