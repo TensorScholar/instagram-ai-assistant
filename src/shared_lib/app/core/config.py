@@ -1,6 +1,9 @@
 """
 Aura Platform - Shared Library Configuration
-Configuration management for the shared library components.
+
+Centralized configuration management for all shared library components.
+Provides type-safe settings with environment variable integration,
+database connection pooling, and service-specific configurations.
 """
 
 import logging

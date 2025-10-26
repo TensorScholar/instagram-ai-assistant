@@ -1,6 +1,10 @@
 """
 Aura Platform - Repository Pattern with Tenant Isolation
-Repository pattern implementation with automatic tenant_id enforcement.
+
+Implements the Repository pattern with automatic tenant isolation enforcement.
+This module provides secure data access patterns that prevent cross-tenant
+data leakage by automatically applying tenant_id filters to all database
+operations for tenant-aware models.
 """
 
 import logging
@@ -20,7 +24,12 @@ T = TypeVar("T", bound=Base)
 
 
 class TenantScopeError(Exception):
-    """Exception raised when attempting to access data without proper tenant scope."""
+    """Raised when attempting to access tenant-scoped data without proper tenant context.
+    
+    This exception is raised when repository operations are attempted on
+    tenant-aware models without providing a valid tenant_id, preventing
+    potential data leakage between tenants.
+    """
     pass
 
 
