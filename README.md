@@ -9,6 +9,12 @@
 
 Transform Instagram DMs into intelligent shopping experiences. Aura handles product recommendations, customer support, and order management through conversational AI that understands context and scales automatically.
 
+## Architecture Flow
+
+![Aura Architecture Flow](https://github.com/TensorScholar/instagram-ai-assistant/assets/aura-architecture-flow.gif)
+
+*Watch the animated flow: Instagram webhooks → AI processing → intelligent responses*
+
 ## Why Aura?
 
 Instagram is where people discover products, but most businesses still handle DMs manually. Aura changes that by:
