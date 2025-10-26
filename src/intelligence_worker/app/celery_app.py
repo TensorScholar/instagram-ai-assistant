@@ -23,7 +23,10 @@ celery_app = Celery(
     "intelligence_worker",
     broker=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password),
     backend=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password, settings.redis_db),
-    include=["app.tasks.message_processing"],
+    include=[
+        "app.tasks.message_processing",
+        "app.tasks.resilient_ai_processing",
+    ],
 )
 
 # Configure Celery
@@ -41,11 +44,23 @@ celery_app.conf.update(
     result_expires=3600,  # 1 hour
     task_soft_time_limit=300,  # 5 minutes
     task_time_limit=600,  # 10 minutes
+    # Durability settings
+    task_acks_late=True,  # Acknowledge after task completion
+    task_reject_on_worker_lost=True,  # Reject tasks on worker loss
+    task_default_retry_delay=60,  # 1 minute retry delay
+    task_max_retries=3,  # Maximum retries
+    # Broker settings
+    broker_transport_options={
+        'visibility_timeout': 3600,  # 1 hour
+        'fanout_prefix': True,
+        'fanout_patterns': True,
+    },
 )
 
 # Configure task routes
 celery_app.conf.task_routes = {
     "app.tasks.message_processing.*": {"queue": "intelligence_queue"},
+    "app.tasks.resilient_ai_processing.*": {"queue": "intelligence_queue"},
 }
 
 # Configure queues
