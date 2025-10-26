@@ -16,6 +16,9 @@ data:
   RABBITMQ_HOST: {{ .Values.apiGateway.env.RABBITMQ_HOST | quote }}
   RABBITMQ_PORT: {{ .Values.apiGateway.env.RABBITMQ_PORT | quote }}
   RABBITMQ_USER: {{ .Values.apiGateway.env.RABBITMQ_USER | quote }}
+  REDIS_HOST: {{ .Values.redis.master.host | default "redis-master" | quote }}
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
   MILVUS_HOST: {{ .Values.intelligenceWorker.env.MILVUS_HOST | quote }}
   MILVUS_PORT: {{ .Values.intelligenceWorker.env.MILVUS_PORT | quote }}
   ENVIRONMENT: {{ .Values.global.environment | quote }}
@@ -35,6 +38,7 @@ type: Opaque
 data:
   POSTGRES_PASSWORD: {{ .Values.postgresql.auth.password | b64enc | quote }}
   RABBITMQ_PASSWORD: {{ .Values.rabbitmq.auth.password | b64enc | quote }}
+  REDIS_PASSWORD: {{ .Values.redis.auth.password | b64enc | quote }}
   SECRET_KEY: {{ .Values.apiGateway.env.SECRET_KEY | b64enc | quote }}
   INSTAGRAM_APP_ID: {{ .Values.apiGateway.env.INSTAGRAM_APP_ID | b64enc | quote }}
   INSTAGRAM_APP_SECRET: {{ .Values.apiGateway.env.INSTAGRAM_APP_SECRET | b64enc | quote }}

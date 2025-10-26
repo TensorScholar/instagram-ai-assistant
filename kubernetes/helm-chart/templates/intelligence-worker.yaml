@@ -92,6 +92,21 @@ spec:
                 configMapKeyRef:
                   name: {{ include "aura-platform.fullname" . }}-config
                   key: MILVUS_PORT
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-config
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "aura-platform.fullname" . }}-secrets
+                  key: REDIS_PASSWORD
             - name: GEMINI_API_KEY
               valueFrom:
                 secretKeyRef:
