@@ -42,8 +42,8 @@ celery_app.conf.update(
     task_eager_propagates=True,
     task_ignore_result=False,
     result_expires=3600,  # 1 hour
-    task_soft_time_limit=300,  # 5 minutes
-    task_time_limit=600,  # 10 minutes
+    task_soft_time_limit=45,   # 45 seconds soft limit
+    task_time_limit=60,        # 60 seconds hard limit - kills hanging tasks
     # Durability settings
     task_acks_late=True,  # Acknowledge after task completion
     task_reject_on_worker_lost=True,  # Reject tasks on worker loss

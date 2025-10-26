@@ -90,11 +90,26 @@ class ResilientGeminiClient:
         genai.configure(api_key=api_key)
         self.model = genai.GenerativeModel(model_name)
         
-        # Configure circuit breaker
+        # Configure aggressive HTTP client with separate timeouts
+        self.http_client = httpx.AsyncClient(
+            timeout=httpx.Timeout(
+                connect=5.0,  # 5 second connection timeout
+                read=10.0,    # 10 second read timeout
+                write=5.0,    # 5 second write timeout
+                pool=5.0,     # 5 second pool timeout
+            )
+        )
+        
+        # Configure circuit breaker with timeout exceptions
         self.circuit_breaker = pybreaker.CircuitBreaker(
             fail_max=circuit_breaker_failure_threshold,
             reset_timeout=circuit_breaker_recovery_timeout,
-            expected_exception=LLMError,
+            expected_exception=(
+                LLMError,
+                httpx.TimeoutException,
+                httpx.ConnectError,
+                httpx.HTTPStatusError,
+            ),
         )
         
         logger.info(f"ResilientGeminiClient initialized with model {model_name}")

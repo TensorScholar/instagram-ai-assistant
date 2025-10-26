@@ -11,6 +11,7 @@ from typing import Any, Dict, List, Optional, Type, TypeVar, Union, Callable, Aw
 from uuid import UUID
 
 from sqlalchemy import delete, select, update
+from sqlalchemy.exc import OperationalError, DisconnectionError
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -26,6 +27,11 @@ logger = logging.getLogger(__name__)
 
 # Type variables for generic operations
 T = TypeVar("T", bound=Base)
+
+
+class DatabaseTransactionError(Exception):
+    """Exception raised when database transaction fails due to network issues."""
+    pass
 
 
 class DatabaseManager:
@@ -162,6 +168,15 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
                 result = await func(*args, **kwargs)
                 logger.debug(f"Transaction completed successfully for function {func.__name__}")
                 return result
+            except (OperationalError, DisconnectionError) as e:
+                logger.critical(f"Database network failure in transaction for function {func.__name__}: {e}")
+                # Explicitly attempt rollback for network failures
+                try:
+                    await session.rollback()
+                    logger.info(f"Explicit rollback completed for function {func.__name__}")
+                except Exception as rollback_error:
+                    logger.error(f"Rollback failed for function {func.__name__}: {rollback_error}")
+                raise DatabaseTransactionError(f"Transaction rolled back due to network failure: {e}")
             except Exception as e:
                 logger.error(f"Transaction failed for function {func.__name__}: {e}")
                 # The transaction will be automatically rolled back by the context manager
