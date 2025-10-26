@@ -11,10 +11,6 @@ Transform Instagram DMs into intelligent shopping experiences. Aura handles prod
 
 ## Architecture Flow
 
-![Aura Flow](aura-flow-small.gif)
-
-*Watch the animated flow: Instagram → API Gateway → RabbitMQ → AI Workers → Response*
-
 ### Interactive Architecture Diagram
 
 ```mermaid
@@ -80,6 +76,8 @@ graph TB
     style GEM fill:#4285F4,stroke:#fff,color:#fff
     style OAI fill:#00A67E,stroke:#fff,color:#fff
 ```
+
+*Interactive diagram showing complete data flow from Instagram webhooks through AI processing to responses*
 
 ## Why Aura?
 
