@@ -438,7 +438,46 @@ kubectl logs -f deployment/aura-api-gateway -n aura-platform | grep -i error
 kubectl logs -f deployment/aura-intelligence-worker -n aura-platform | grep -i error
 ```
 
-### 6. Scaling Operations
+### 6. Resource Quota Management
+
+```bash
+# Check current resource usage
+kubectl describe resourcequota aura-platform-quota -n aura-platform
+
+# Check resource limits
+kubectl describe limitrange aura-platform-limits -n aura-platform
+
+# Adjust ResourceQuota for different cluster sizes
+# For small clusters (4 cores, 8GB RAM):
+kubectl patch resourcequota aura-platform-quota -n aura-platform --type='merge' -p='
+{
+  "spec": {
+    "hard": {
+      "requests.cpu": "2",
+      "requests.memory": "4Gi",
+      "limits.cpu": "4",
+      "limits.memory": "8Gi",
+      "pods": "10"
+    }
+  }
+}'
+
+# For large clusters (16 cores, 32GB RAM):
+kubectl patch resourcequota aura-platform-quota -n aura-platform --type='merge' -p='
+{
+  "spec": {
+    "hard": {
+      "requests.cpu": "8",
+      "requests.memory": "16Gi",
+      "limits.cpu": "16",
+      "limits.memory": "32Gi",
+      "pods": "50"
+    }
+  }
+}'
+```
+
+### 7. Scaling Operations
 
 ```bash
 # Scale API Gateway
@@ -452,6 +491,10 @@ kubectl scale deployment aura-ingestion-worker --replicas=3 -n aura-platform
 
 # Check scaling status
 kubectl get pods -l app.kubernetes.io/name=aura-api-gateway -n aura-platform
+
+# Monitor resource usage after scaling
+kubectl top pods -n aura-platform
+kubectl describe resourcequota aura-platform-quota -n aura-platform
 ```
 
 ### 7. Backup and Recovery
