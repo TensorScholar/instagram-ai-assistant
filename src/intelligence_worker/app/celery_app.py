@@ -13,11 +13,16 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# Create Celery application
+# Construct Redis URLs from discrete environment variables
+def get_redis_url(host: str, port: int, password: str, db: int = 0) -> str:
+    """Construct Redis URL from discrete components."""
+    return f"redis://:{password}@{host}:{port}/{db}"
+
+# Create Celery application with Redis backend
 celery_app = Celery(
     "intelligence_worker",
-    broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend,
+    broker=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password),
+    backend=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password, settings.redis_db),
     include=["app.tasks.message_processing"],
 )
 
