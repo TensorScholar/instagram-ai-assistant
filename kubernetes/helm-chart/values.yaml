@@ -1,0 +1,307 @@
+global:
+  environment: production
+  domain: aura-platform.local
+  
+# Database Configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "CHANGE_ME_POSTGRES_PASSWORD"
+    username: "aura_user"
+    password: "CHANGE_ME_AURA_PASSWORD"
+    database: "aura_platform"
+  primary:
+    persistence:
+      size: 20Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+# Message Queue Configuration  
+rabbitmq:
+  enabled: true
+  auth:
+    username: "aura_user"
+    password: "CHANGE_ME_RABBITMQ_PASSWORD"
+  persistence:
+    size: 10Gi
+    storageClass: "local-path"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+
+# Redis Cache & Celery Backend Configuration
+redis:
+  enabled: true
+  auth:
+    enabled: true
+    password: "CHANGE_ME_REDIS_PASSWORD"
+  master:
+    persistence:
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Vector Database Configuration
+milvus:
+  enabled: true
+  standalone:
+    enabled: true
+    persistence:
+      size: 30Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        cpu: 1000m
+        memory: 1Gi
+  etcd:
+    enabled: true
+    persistence:
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+  minio:
+    enabled: true
+    persistence:
+      size: 20Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Secrets Management
+vault:
+  enabled: true
+  server:
+    dev:
+      enabled: false
+    standalone:
+      enabled: true
+      config:
+        ui:
+          enabled: true
+        storage:
+          file:
+            path: "/vault/data"
+    dataStorage:
+      size: 5Gi
+      storageClass: "local-path"
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Application Services
+apiGateway:
+  replicaCount: 2
+  image:
+    repository: "aura/api-gateway"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  service:
+    type: "ClusterIP"
+    port: 8000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  env:
+    POSTGRES_HOST: "postgresql"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "aura_platform"
+    POSTGRES_USER: "aura_user"
+    RABBITMQ_HOST: "rabbitmq"
+    RABBITMQ_PORT: "5672"
+    RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
+    SECRET_KEY: "CHANGE_ME_SECRET_KEY"
+    INSTAGRAM_APP_ID: "CHANGE_ME_INSTAGRAM_APP_ID"
+    INSTAGRAM_APP_SECRET: "CHANGE_ME_INSTAGRAM_APP_SECRET"
+    INSTAGRAM_WEBHOOK_VERIFY_TOKEN: "CHANGE_ME_WEBHOOK_TOKEN"
+  livenessProbe:
+    httpGet:
+      path: /info
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /info
+      port: 8000
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+intelligenceWorker:
+  replicaCount: 3
+  image:
+    repository: "aura/intelligence-worker"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    POSTGRES_HOST: "postgresql"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "aura_platform"
+    POSTGRES_USER: "aura_user"
+    RABBITMQ_HOST: "rabbitmq"
+    RABBITMQ_PORT: "5672"
+    RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
+    MILVUS_HOST: "milvus"
+    MILVUS_PORT: "19530"
+    GEMINI_API_KEY: "CHANGE_ME_GEMINI_API_KEY"
+    OPENAI_API_KEY: "CHANGE_ME_OPENAI_API_KEY"
+  livenessProbe:
+    exec:
+      command:
+        - python
+        - -c
+        - "import requests; requests.get('http://localhost:8000/health')"
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    exec:
+      command:
+        - python
+        - -c
+        - "import requests; requests.get('http://localhost:8000/health')"
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+ingestionWorker:
+  replicaCount: 2
+  image:
+    repository: "aura/ingestion-worker"
+    tag: "latest"
+    pullPolicy: "IfNotPresent"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  env:
+    POSTGRES_HOST: "postgresql"
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: "aura_platform"
+    POSTGRES_USER: "aura_user"
+    RABBITMQ_HOST: "rabbitmq"
+    RABBITMQ_PORT: "5672"
+    RABBITMQ_USER: "aura_user"
+    REDIS_HOST: "redis-master"
+    REDIS_PORT: "6379"
+    MILVUS_HOST: "milvus"
+    MILVUS_PORT: "19530"
+  livenessProbe:
+    exec:
+      command:
+        - python
+        - -c
+        - "import requests; requests.get('http://localhost:8000/health')"
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    exec:
+      command:
+        - python
+        - -c
+        - "import requests; requests.get('http://localhost:8000/health')"
+    initialDelaySeconds: 5
+    periodSeconds: 5
+
+# Ingress Configuration
+ingress:
+  enabled: true
+  className: "traefik"
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    traefik.ingress.kubernetes.io/router.middlewares: "default-security-headers@kubernetescrd"
+  hosts:
+    - host: "aura-platform.local"
+      paths:
+        - path: "/"
+          pathType: "Prefix"
+          service: "api-gateway"
+          port: 8000
+  tls:
+    - secretName: "aura-platform-tls"
+      hosts:
+        - "aura-platform.local"
+
+# Security Configuration
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Network Policies
+networkPolicy:
+  enabled: true
+
+# Service Account
+serviceAccount:
+  create: true
+  annotations: {}
+  name: "aura-platform"
+
+# Pod Disruption Budget
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Horizontal Pod Autoscaler
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80

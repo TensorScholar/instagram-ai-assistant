@@ -13,12 +13,20 @@ from .config import settings
 
 logger = logging.getLogger(__name__)
 
-# Create Celery application
+# Construct Redis URLs from discrete environment variables
+def get_redis_url(host: str, port: int, password: str, db: int = 0) -> str:
+    """Construct Redis URL from discrete components."""
+    return f"redis://:{password}@{host}:{port}/{db}"
+
+# Create Celery application with Redis backend
 celery_app = Celery(
     "intelligence_worker",
-    broker=settings.celery_broker_url,
-    backend=settings.celery_result_backend,
-    include=["app.tasks.message_processing"],
+    broker=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password),
+    backend=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password, settings.redis_db),
+    include=[
+        "app.tasks.message_processing",
+        "app.tasks.resilient_ai_processing",
+    ],
 )
 
 # Configure Celery
@@ -36,19 +44,50 @@ celery_app.conf.update(
     result_expires=3600,  # 1 hour
     task_soft_time_limit=300,  # 5 minutes
     task_time_limit=600,  # 10 minutes
+    # Durability settings
+    task_acks_late=True,  # Acknowledge after task completion
+    task_reject_on_worker_lost=True,  # Reject tasks on worker loss
+    task_default_retry_delay=60,  # 1 minute retry delay
+    task_max_retries=3,  # Maximum retries
+    # Broker settings
+    broker_transport_options={
+        'visibility_timeout': 3600,  # 1 hour
+        'fanout_prefix': True,
+        'fanout_patterns': True,
+    },
 )
 
-# Configure task routes
+# Configure task routes with separate queues
 celery_app.conf.task_routes = {
-    "app.tasks.message_processing.*": {"queue": "intelligence_queue"},
+    "app.tasks.message_processing.*": {"queue": "realtime_queue"},
+    "app.tasks.resilient_ai_processing.*": {"queue": "realtime_queue"},
+    "app.tasks.bulk_ingestion.*": {"queue": "bulk_queue"},
 }
 
-# Configure queues
-celery_app.conf.task_default_queue = "intelligence_queue"
+# Configure separate queues for different priorities
+celery_app.conf.task_default_queue = "realtime_queue"
 celery_app.conf.task_queues = {
-    "intelligence_queue": {
-        "exchange": "intelligence_exchange",
-        "routing_key": "intelligence",
+    "realtime_queue": {
+        "exchange": "aura_events",
+        "routing_key": "realtime",
+        "queue_arguments": {
+            "x-max-length": 1000,  # Limit queue size
+            "x-message-ttl": 300000,  # 5 minute TTL
+            "x-max-retries": 3,
+            "x-dead-letter-exchange": "dlx",
+            "x-dead-letter-routing-key": "failed",
+        }
+    },
+    "bulk_queue": {
+        "exchange": "aura_events", 
+        "routing_key": "bulk",
+        "queue_arguments": {
+            "x-max-length": 5000,  # Larger limit for bulk operations
+            "x-message-ttl": 1800000,  # 30 minute TTL
+            "x-max-retries": 5,
+            "x-dead-letter-exchange": "dlx",
+            "x-dead-letter-routing-key": "failed",
+        }
     }
 }
 

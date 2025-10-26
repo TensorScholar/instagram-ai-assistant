@@ -80,7 +80,23 @@ class TenantAwareVectorStore:
         Returns:
             Collection name
         """
-        return f"tenant_{str(tenant_id).replace('-', '_')}_products"
+        # Use a collision-resistant naming scheme
+        tenant_str = str(tenant_id).replace('-', '')
+        return f"tenant_{tenant_str}_products"
+    
+    def _get_partition_name(self, tenant_id: UUID) -> str:
+        """
+        Get partition name for tenant.
+        
+        Args:
+            tenant_id: The tenant ID
+            
+        Returns:
+            Partition name
+        """
+        # Use a collision-resistant naming scheme
+        tenant_str = str(tenant_id).replace('-', '')
+        return f"tenant_{tenant_str}_partition"
     
     def _create_collection_schema(self) -> CollectionSchema:
         """
@@ -156,7 +172,7 @@ class TenantAwareVectorStore:
     
     def create_tenant_collection(self, tenant_id: UUID) -> bool:
         """
-        Create vector collection for tenant.
+        Create vector collection and partition for tenant.
         
         Args:
             tenant_id: The tenant ID
@@ -166,10 +182,16 @@ class TenantAwareVectorStore:
         """
         try:
             collection_name = self._get_collection_name(tenant_id)
+            partition_name = self._get_partition_name(tenant_id)
             
             # Check if collection already exists
             if utility.has_collection(collection_name):
                 logger.info(f"Collection {collection_name} already exists")
+                # Ensure partition exists
+                collection = Collection(collection_name)
+                if not collection.has_partition(partition_name):
+                    collection.create_partition(partition_name)
+                    logger.info(f"Created partition {partition_name} for tenant {tenant_id}")
                 return True
             
             # Create collection
@@ -178,6 +200,9 @@ class TenantAwareVectorStore:
                 name=collection_name,
                 schema=schema,
             )
+            
+            # Create partition
+            collection.create_partition(partition_name)
             
             # Create index on embedding vector
             index_params = {
@@ -191,7 +216,7 @@ class TenantAwareVectorStore:
                 index_params=index_params,
             )
             
-            logger.info(f"Created collection {collection_name} for tenant {tenant_id}")
+            logger.info(f"Created collection {collection_name} with partition {partition_name} for tenant {tenant_id}")
             return True
             
         except Exception as e:
@@ -217,12 +242,18 @@ class TenantAwareVectorStore:
         """
         try:
             collection_name = self._get_collection_name(tenant_id)
+            partition_name = self._get_partition_name(tenant_id)
             
-            # Ensure collection exists
+            # Ensure collection and partition exist
             if not utility.has_collection(collection_name):
                 self.create_tenant_collection(tenant_id)
             
             collection = Collection(collection_name)
+            
+            # Ensure partition exists
+            if not collection.has_partition(partition_name):
+                collection.create_partition(partition_name)
+                logger.info(f"Created partition {partition_name} for tenant {tenant_id}")
             
             # Prepare data
             data = []
@@ -241,8 +272,8 @@ class TenantAwareVectorStore:
                     "embedding_vector": embedding,
                 })
             
-            # Insert data
-            collection.insert(data)
+            # Insert data into partition
+            collection.insert(data, partition_name=partition_name)
             collection.flush()
             
             logger.info(f"Added {len(products)} products to vector store for tenant {tenant_id}")
@@ -275,6 +306,7 @@ class TenantAwareVectorStore:
         """
         try:
             collection_name = self._get_collection_name(tenant_id)
+            partition_name = self._get_partition_name(tenant_id)
             
             if not utility.has_collection(collection_name):
                 logger.warning(f"Collection {collection_name} does not exist")
@@ -289,22 +321,25 @@ class TenantAwareVectorStore:
                 "params": {"nprobe": 10},
             }
             
-            # Build filter expression
-            filter_expr = f'tenant_id == "{tenant_id}"'
+            # Build filter expression (simplified since we're using partitions)
+            filter_expr = None
             if filters:
+                filter_parts = []
                 for key, value in filters.items():
                     if isinstance(value, str):
-                        filter_expr += f' and {key} == "{value}"'
+                        filter_parts.append(f'{key} == "{value}"')
                     else:
-                        filter_expr += f' and {key} == {value}'
+                        filter_parts.append(f'{key} == {value}')
+                filter_expr = ' and '.join(filter_parts)
             
-            # Search
+            # Search with partition
             results = collection.search(
                 data=[query_embedding],
                 anns_field="embedding_vector",
                 param=search_params,
                 limit=top_k,
                 expr=filter_expr,
+                partition_names=[partition_name],  # Use partition for tenant isolation
                 output_fields=[
                     "product_id",
                     "external_id",

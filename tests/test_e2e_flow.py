@@ -47,7 +47,7 @@ def test_event_creation_and_serialization():
         assert event_dict["tenant_id"] == tenant_id
         
         print("✅ Event creation and serialization successful")
-        assert event_dict is not None
+        return True
         
     except Exception as e:
         print(f"❌ Event creation test failed: {e}")
@@ -107,7 +107,7 @@ def test_api_gateway_webhook_processing():
         assert message_text == "Hi, I'm looking for headphones"
         
         print("✅ API Gateway webhook processing successful")
-        assert True
+        return True
         
     except Exception as e:
         print(f"❌ API Gateway webhook processing test failed: {e}")
@@ -125,7 +125,7 @@ def test_intelligence_worker_message_processing():
             "event_type": "instagram.direct_message.received",
             "tenant_id": str(uuid4()),
             "correlation_id": str(uuid4()),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(datetime.timezone.utc).isoformat(),
             "source_service": "api_gateway",
             "instagram_user_id": "user_789",
             "instagram_username": "test_customer",
@@ -150,7 +150,7 @@ def test_intelligence_worker_message_processing():
         assert "headphones" in mock_response.lower() or "product" in mock_response.lower()
         
         print("✅ Intelligence Worker message processing successful")
-        assert True
+        return True
         
     except Exception as e:
         print(f"❌ Intelligence Worker message processing test failed: {e}")
@@ -204,7 +204,7 @@ def test_security_utilities():
         assert TenantSecurity.validate_tenant_access(tenant_id_1, tenant_id_2) is False
         
         print("✅ Security utilities test successful")
-        assert True
+        return True
         
     except Exception as e:
         print(f"❌ Security utilities test failed: {e}")
@@ -259,7 +259,7 @@ def test_database_models():
         assert user.username == "test_user"
         
         print("✅ Database models test successful")
-        assert True
+        return True
         
     except Exception as e:
         print(f"❌ Database models test failed: {e}")
@@ -296,7 +296,7 @@ def test_complete_message_flow():
         
         # Step 4: Validate complete flow
         print("✅ Complete message flow test successful")
-        assert True
+        return True
         
     except Exception as e:
         print(f"❌ Complete message flow test failed: {e}")

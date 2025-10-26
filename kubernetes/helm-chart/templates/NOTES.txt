@@ -1,0 +1,47 @@
+1. Get the application URL by running these commands:
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+{{- else if contains "NodePort" .Values.apiGateway.service.type }}
+  export NODE_PORT=$(kubectl get --namespace {{ .Values.global.namespace | default "aura-platform" }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "aura-platform.fullname" . }}-api-gateway)
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Values.global.namespace | default "aura-platform" }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.apiGateway.service.type }}
+     NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+           You can watch the status of by running 'kubectl get --namespace {{ .Values.global.namespace | default "aura-platform" }} svc -w {{ include "aura-platform.fullname" . }}-api-gateway'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Values.global.namespace | default "aura-platform" }} {{ include "aura-platform.fullname" . }}-api-gateway --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.apiGateway.service.port }}
+{{- else if contains "ClusterIP" .Values.apiGateway.service.type }}
+  export POD_NAME=$(kubectl get pods --namespace {{ .Values.global.namespace | default "aura-platform" }} -l "app.kubernetes.io/name={{ include "aura-platform.name" . }},app.kubernetes.io/instance={{ .Release.Name }},app.kubernetes.io/component=api-gateway" -o jsonpath="{.items[0].metadata.name}")
+  export CONTAINER_PORT=$(kubectl get pod --namespace {{ .Values.global.namespace | default "aura-platform" }} $POD_NAME -o jsonpath="{.spec.containers[0].ports[0].containerPort}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Values.global.namespace | default "aura-platform" }} port-forward $POD_NAME 8080:$CONTAINER_PORT
+{{- end }}
+
+2. Check the status of your deployment:
+  kubectl get pods --namespace {{ .Values.global.namespace | default "aura-platform" }} -l "app.kubernetes.io/name={{ include "aura-platform.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+3. View logs:
+  kubectl logs --namespace {{ .Values.global.namespace | default "aura-platform" }} -l "app.kubernetes.io/name={{ include "aura-platform.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -f
+
+4. Scale the deployment:
+  kubectl scale --namespace {{ .Values.global.namespace | default "aura-platform" }} deployment {{ include "aura-platform.fullname" . }}-api-gateway --replicas=3
+  kubectl scale --namespace {{ .Values.global.namespace | default "aura-platform" }} deployment {{ include "aura-platform.fullname" . }}-intelligence-worker --replicas=5
+  kubectl scale --namespace {{ .Values.global.namespace | default "aura-platform" }} deployment {{ include "aura-platform.fullname" . }}-ingestion-worker --replicas=3
+
+5. Database initialization:
+  kubectl exec --namespace {{ .Values.global.namespace | default "aura-platform" }} -it deployment/postgresql -- psql -U {{ .Values.postgresql.auth.username }} -d {{ .Values.postgresql.auth.database }} -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"; CREATE EXTENSION IF NOT EXISTS \"pg_trgm\";"
+
+6. Health checks:
+  kubectl get pods --namespace {{ .Values.global.namespace | default "aura-platform" }} -o wide
+  kubectl get services --namespace {{ .Values.global.namespace | default "aura-platform" }}
+  kubectl get ingress --namespace {{ .Values.global.namespace | default "aura-platform" }}
+
+7. Monitoring:
+  kubectl top pods --namespace {{ .Values.global.namespace | default "aura-platform" }}
+  kubectl describe pod --namespace {{ .Values.global.namespace | default "aura-platform" }} -l "app.kubernetes.io/name={{ include "aura-platform.name" . }},app.kubernetes.io/instance={{ .Release.Name }}"
+
+For more information about the Aura Platform, visit: https://github.com/aura-platform/aura-platform

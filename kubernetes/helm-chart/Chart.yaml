@@ -1,0 +1,39 @@
+apiVersion: v2
+name: aura-platform
+description: Aura Platform - Multi-tenant AI-powered Instagram customer assistance
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - ai
+  - instagram
+  - customer-assistance
+  - multi-tenant
+  - microservices
+home: https://github.com/aura-platform/aura-platform
+sources:
+  - https://github.com/aura-platform/aura-platform
+maintainers:
+  - name: Aura Platform Team
+    email: team@aura-platform.com
+dependencies:
+  - name: postgresql
+    version: 12.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql.enabled
+  - name: rabbitmq
+    version: 11.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: rabbitmq.enabled
+  - name: redis
+    version: 18.x.x
+    repository: https://charts.bitnami.com/bitnami
+    condition: redis.enabled
+  - name: milvus
+    version: 4.x.x
+    repository: https://milvus-io.github.io/milvus-helm
+    condition: milvus.enabled
+  - name: vault
+    version: 0.x.x
+    repository: https://helm.releases.hashicorp.com
+    condition: vault.enabled

@@ -13,6 +13,7 @@ from fastapi.responses import JSONResponse
 
 from .api.endpoints import webhooks
 from .core.config import settings
+from .middleware.resilience import RateLimitMiddleware, BackPressureMiddleware, HealthCheckMiddleware
 from shared_lib.app.utils.security import initialize_security
 
 # Configure logging
@@ -77,6 +78,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add resilience middleware (order matters - last added is first executed)
+app.add_middleware(HealthCheckMiddleware)
+app.add_middleware(BackPressureMiddleware)
+app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
 # Include routers
 app.include_router(webhooks.router)

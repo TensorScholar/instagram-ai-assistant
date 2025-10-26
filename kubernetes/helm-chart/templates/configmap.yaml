@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "aura-platform.fullname" . }}-config
+  namespace: {{ .Values.global.namespace | default "aura-platform" }}
+  labels:
+    app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+data:
+  POSTGRES_HOST: {{ .Values.apiGateway.env.POSTGRES_HOST | quote }}
+  POSTGRES_PORT: {{ .Values.apiGateway.env.POSTGRES_PORT | quote }}
+  POSTGRES_DB: {{ .Values.apiGateway.env.POSTGRES_DB | quote }}
+  POSTGRES_USER: {{ .Values.apiGateway.env.POSTGRES_USER | quote }}
+  RABBITMQ_HOST: {{ .Values.apiGateway.env.RABBITMQ_HOST | quote }}
+  RABBITMQ_PORT: {{ .Values.apiGateway.env.RABBITMQ_PORT | quote }}
+  RABBITMQ_USER: {{ .Values.apiGateway.env.RABBITMQ_USER | quote }}
+  REDIS_HOST: {{ .Values.redis.master.host | default "redis-master" | quote }}
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  MILVUS_HOST: {{ .Values.intelligenceWorker.env.MILVUS_HOST | quote }}
+  MILVUS_PORT: {{ .Values.intelligenceWorker.env.MILVUS_PORT | quote }}
+  ENVIRONMENT: {{ .Values.global.environment | quote }}
+  DOMAIN: {{ .Values.global.domain | quote }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "aura-platform.fullname" . }}-secrets
+  namespace: {{ .Values.global.namespace | default "aura-platform" }}
+  labels:
+    app.kubernetes.io/name: {{ include "aura-platform.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+type: Opaque
+data:
+  POSTGRES_PASSWORD: {{ .Values.postgresql.auth.password | b64enc | quote }}
+  RABBITMQ_PASSWORD: {{ .Values.rabbitmq.auth.password | b64enc | quote }}
+  REDIS_PASSWORD: {{ .Values.redis.auth.password | b64enc | quote }}
+  SECRET_KEY: {{ .Values.apiGateway.env.SECRET_KEY | b64enc | quote }}
+  INSTAGRAM_APP_ID: {{ .Values.apiGateway.env.INSTAGRAM_APP_ID | b64enc | quote }}
+  INSTAGRAM_APP_SECRET: {{ .Values.apiGateway.env.INSTAGRAM_APP_SECRET | b64enc | quote }}
+  INSTAGRAM_WEBHOOK_VERIFY_TOKEN: {{ .Values.apiGateway.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN | b64enc | quote }}
+  GEMINI_API_KEY: {{ .Values.intelligenceWorker.env.GEMINI_API_KEY | b64enc | quote }}
+  OPENAI_API_KEY: {{ .Values.intelligenceWorker.env.OPENAI_API_KEY | b64enc | quote }}
