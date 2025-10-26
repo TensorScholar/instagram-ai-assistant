@@ -1,184 +1,195 @@
+█████╗ ██╗   ██╗██████╗  █████╗ 
+██╔══██╗██║   ██║██╔══██╗██╔══██╗
+███████║██║   ██║██████╔╝███████║
+██╔══██║██║   ██║██╔══██╗██╔══██║
+██║  ██║╚██████╔╝██║  ██║██║  ██║
+╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝
+
 # Aura
+### The Resilient AI Copilot for Instagram-Native Commerce
 
-> **The Resilient AI Assistant Platform for Modern E-commerce on Instagram**
+[![CI](https://img.shields.io/badge/CI-passing-00d1b2?style=for-the-badge)](https://github.com/TensorScholar/instagram-ai-assistant/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-95%25-44cc11?style=for-the-badge)](https://github.com/TensorScholar/instagram-ai-assistant)
+[![License](https://img.shields.io/badge/License-MIT-informational?style=for-the-badge)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-3776ab?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ed?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com)
 
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/TensorScholar/instagram-ai-assistant)
-[![Code Coverage](https://img.shields.io/badge/coverage-95%25-brightgreen.svg)](https://github.com/TensorScholar/instagram-ai-assistant)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/TensorScholar/instagram-ai-assistant)
-[![Python](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
-[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://docker.com)
+---
 
-## 🌟 Introduction
+## 📌 Executive Snapshot
+>Aura orchestrates intelligent, multi-tenant customer experiences on Instagram. It fuses retrieval-augmented generation, high-fidelity data pipelines, and zero-trust security patterns into a production-ready platform that feels effortless to operate.
 
-Aura is a cutting-edge, multi-tenant AI platform designed to revolutionize e-commerce interactions on Instagram. Built with enterprise-grade resilience and fault tolerance, Aura seamlessly integrates AI-powered conversational capabilities with Instagram's ecosystem, enabling businesses to provide intelligent, context-aware customer support and product recommendations.
+- **Mission-aligned design** — built for modern e-commerce, tuned for conversational excellence.
+- **Enterprise posture** — circuit breakers, poison pill defenses, Vault-delivered secrets, and DLQs baked in.
+- **Future-proof architecture** — event-driven, Kubernetes-native, and stress-tested against zero-day scenarios.
 
-## ✨ Core Features
+---
 
-- 🏢 **Multi-Tenant Architecture** - Secure, isolated environments for each business
-- 🧠 **AI-Powered RAG Pipeline** - Intelligent retrieval-augmented generation for accurate responses
-- 🛡️ **Fault-Tolerant & Resilient** - Circuit breakers, retry mechanisms, and poison pill protection
-- 🚀 **Scalable by Design** - Event-driven microservices with horizontal scaling capabilities
-- 🔒 **Enterprise Security** - Vault integration, tenant isolation, and comprehensive audit trails
-- 📊 **Real-time Monitoring** - Comprehensive metrics and alerting for production environments
-- 🔄 **Event-Driven Architecture** - Asynchronous processing with RabbitMQ and Celery
-- 🐳 **Container-Ready** - Docker and Kubernetes deployment with Helm charts
+## 📚 Table of Contents
+1. [Why Aura Exists](#-why-aura-exists)
+2. [Platform Highlights](#-platform-highlights)
+3. [Architecture in Motion](#-architecture-in-motion)
+4. [Technology Stack](#-technology-stack)
+5. [Getting Started](#-getting-started)
+6. [Running the Test Suite](#-running-the-test-suite)
+7. [Deployment Pathways](#-deployment-pathways)
+8. [Operational Excellence](#-operational-excellence)
+9. [Author](#-author)
 
-## 🏗️ Architecture Overview
+---
 
-Aura follows a modern event-driven microservices architecture, designed for high availability and scalability:
+## 🧭 Why Aura Exists
+Instagram is no longer just a social feed—it is the storefront window for high-intent shoppers. Brands must respond instantly, consistently, and securely. Aura delivers that capability by merging:
+- **Deep context** via tenant-aware data ingestion and Milvus-backed embeddings.
+- **Conversational intelligence** powered by Google Gemini with OpenAI fallback.
+- **Operational rigor** from infrastructure pipelines that expect failure and thrive through it.
 
+---
+
+## ✨ Platform Highlights
+- 🏢 **True Multi-Tenancy** — Schema-scoped data, repository-enforced `tenant_id`, and partitioned vector stores prevent bleed-through.
+- 🧠 **Precision RAG** — Retrieval-augmented conversations grounded in live product intelligence.
+- 🛡️ **Resilience Toolkit** — Tenacity retries, pybreaker circuit breakers, DLQs, idempotent tasks, and poison pill detection.
+- 🚀 **Elastic Throughput** — Dedicated Celery queues (`realtime` and `bulk`), Redis-backed idempotency, and RabbitMQ publisher confirms.
+- 🔐 **Zero-Trust Secrets** — HashiCorp Vault injection, tenant-specific secret paths, and local Vault bootstrap script.
+- 📊 **Observability First** — Metrics for queue depth, circuit breaker state, transactional rollbacks, and LLM health.
+
+---
+
+## 🏗️ Architecture in Motion
 ```
-┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│   API Gateway   │────│  Intelligence    │────│  Ingestion      │
-│   (FastAPI)     │    │  Worker          │    │  Worker         │
-│                 │    │  (Celery)        │    │  (Celery)       │
-└─────────────────┘    └──────────────────┘    └─────────────────┘
-         │                       │                       │
-         │              ┌─────────────────┐             │
-         └──────────────│   RabbitMQ      │─────────────┘
-                        │   (Message      │
-                        │    Broker)      │
-                        └─────────────────┘
-                                 │
-         ┌─────────────────────────────────────────────┐
-         │              Shared Libraries                │
-         │  ┌─────────┐ ┌─────────┐ ┌─────────────────┐ │
-         │  │PostgreSQL│ │ Milvus  │ │      Redis      │ │
-         │  │(Primary) │ │(Vector) │ │   (Cache/Celery)│ │
-         │  └─────────┘ └─────────┘ └─────────────────┘ │
-         └─────────────────────────────────────────────┘
+                    ┌───────────────┐
+Instagram Webhooks ─►   API Gateway │ (FastAPI + SlowAPI + Backpressure)
+                    └──────┬────────┘
+                           │  publishes (persistent)
+                           ▼
+                   ┌──────────────────┐
+                   │   RabbitMQ       │  ◄─ Dead Letter Exchange
+                   └──────┬─────┬────┘
+                          │     │
+             realtime_queue│     │bulk_queue
+                          │     │
+                ┌─────────▼─┐ ┌─▼──────────┐
+                │Intelligence│ │ Ingestion  │
+                │  Worker    │ │  Worker    │
+                │ (Celery)   │ │ (Celery)   │
+                └────┬──────┘ └────┬───────┘
+                     │             │
+   ┌─────────────────▼─────────────▼────────────────┐
+   │            Shared Service Mesh                 │
+   │  PostgreSQL │ Milvus (Partitions) │ Redis      │
+   │  (SQLAlchemy│ Tenant-specific RAG │ Locks,     │
+   │  + Pydantic)│ Embeddings         │ Caching    │
+   └───────────────────────────────────────────────┘
+                     │
+                     ▼
+           HashiCorp Vault  (tenant secrets, rotations)
 ```
 
-### Core Components
+**Key flows:**
+1. **Webhook ingestion** — signatures validated, payloads normalized, and events published with correlation IDs.
+2. **Message intelligence** — AI workers run resilient LLM orchestration with backoff, circuit-breaking, and fallback models.
+3. **Data consistency** — Two-phase commits ensure PostgreSQL writes precede Milvus vector ingestion with automatic retries.
 
-- **API Gateway**: FastAPI-based entry point handling Instagram webhooks and API requests
-- **Intelligence Worker**: AI processing engine with Gemini integration and RAG capabilities
-- **Ingestion Worker**: Data processing pipeline for product catalogs and tenant management
-- **Shared Libraries**: Common utilities for database access, AI operations, and security
+---
 
-## 🛠️ Technology Stack
+## 🧰 Technology Stack
+| Layer | Technologies | Purpose |
+|-------|--------------|---------|
+| Application | FastAPI, Pydantic, Celery | APIs, data validation, distributed tasks |
+| AI & RAG | Google Gemini, OpenAI, Milvus | Conversational intelligence and embeddings |
+| Data | PostgreSQL, SQLAlchemy, Alembic | Tenant-scoped relational storage |
+| Messaging | RabbitMQ, kombu | Durable event-driven backbone |
+| Caching & Locks | Redis (async) | Idempotency, retry tracking, Celery backend |
+| Secrets | HashiCorp Vault, Vault Agent Injector | Secure, tenant-aware secrets delivery |
+| Infrastructure | Docker, docker-compose, Kubernetes, Helm | Local-to-production parity |
+| Reliability | Tenacity, pybreaker, slowapi | Resilience patterns, rate limiting, circuit breaking |
+| Observability | Prometheus-ready metrics | Queue depth, circuit breaker state, pool utilization |
 
-| Category | Technology | Purpose |
-|----------|------------|---------|
-| **Backend** | Python 3.12+ | Core application language |
-| **Web Framework** | FastAPI | High-performance API framework |
-| **Database** | PostgreSQL | Primary data storage |
-| **Vector Store** | Milvus | AI embeddings and similarity search |
-| **Cache** | Redis | Caching and Celery backend |
-| **Message Queue** | RabbitMQ | Asynchronous task processing |
-| **Task Queue** | Celery | Distributed task processing |
-| **AI/ML** | Google Gemini | Large language model integration |
-| **Containerization** | Docker | Application containerization |
-| **Orchestration** | Kubernetes | Production deployment |
-| **Package Management** | Helm | Kubernetes package manager |
-| **Secrets Management** | HashiCorp Vault | Secure credential storage |
-| **Monitoring** | Prometheus/Grafana | Metrics and observability |
+---
 
 ## 🚀 Getting Started
-
 ### Prerequisites
+- Docker & Docker Compose
+- Python 3.12+
+- GNU Make
+- (Optional) HashiCorp Vault CLI for local secret seeding
 
-- Docker and Docker Compose
-- Python 3.12+ (for local development)
-- Make (for using the Makefile)
-
-### Local Development Setup
-
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/TensorScholar/instagram-ai-assistant.git
-   cd instagram-ai-assistant
-   ```
-
-2. **Start the development environment**
-   ```bash
-   make dev-up
-   ```
-
-3. **Initialize Vault secrets (optional)**
-   ```bash
-   make setup-vault
-   ```
-
-4. **Verify the setup**
-   ```bash
-   make health-check
-   ```
-
-### Available Make Commands
-
+### Quickstart
 ```bash
-make dev-up          # Start development environment
-make dev-down        # Stop development environment
-make test            # Run all tests
-make lint            # Run code quality checks
-make build           # Build Docker images
-make clean           # Clean up containers and volumes
-make setup-vault     # Initialize Vault with secrets
-make health-check    # Check service health
+# 1. Clone the repository
+git clone https://github.com/TensorScholar/instagram-ai-assistant.git
+cd instagram-ai-assistant
+
+# 2. Launch the local platform
+make dev-up
+
+# 3. Seed development secrets (optional but recommended)
+make setup-vault
+
+# 4. Verify service health
+make health-check
 ```
 
-## 🧪 Running Tests
-
-Execute the comprehensive test suite:
-
+### Essential Make Targets
 ```bash
+make dev-up          # Start full local stack
+make dev-down        # Stop and clean containers
+make test            # Execute full pytest suite
+make lint            # Run static analysis (flake8, mypy, black --check)
+make build           # Build production Docker images
+make clean           # Remove containers, volumes, and caches
+```
+
+> 💡 **Tip:** Environment variables are loaded from `.env` (see `SECRETS.md` for placeholders). Never commit real secrets.
+
+---
+
+## 🧪 Running the Test Suite
+```bash
+# Core unit and integration tests
 make test
+
+# Granular control
+python -m pytest src/ -v                # Unit tests
+python -m pytest tests/integration/ -v  # Integration scenarios
+python -m pytest tests/stress/ -v       # Load & pool exhaustion simulations
+python -m pytest tests/validation/ -v   # Armor-plating multi-pipeline validation
 ```
 
-For specific test categories:
+---
 
+## 🚢 Deployment Pathways
+For full production guidance—Helm values, Vault injector annotations, autoscaling policies—consult [DEPLOYMENT.md](DEPLOYMENT.md).
+
+**Snapshot:**
 ```bash
-# Unit tests
-python3 -m pytest src/ -v
-
-# Integration tests
-python3 -m pytest tests/integration/ -v
-
-# Validation tests
-python3 -m pytest tests/validation/ -v
-
-# Stress tests
-python3 -m pytest tests/stress/ -v
-```
-
-## 🚀 Deployment
-
-For production deployment instructions, comprehensive configuration guides, and Kubernetes setup, please refer to [DEPLOYMENT.md](DEPLOYMENT.md).
-
-### Quick Production Deployment
-
-```bash
-# Build production images
+# Build hardened images
 make build
 
-# Deploy to Kubernetes
-helm install aura ./kubernetes/helm-chart
+# Deploy via Helm
+helm dependency update kubernetes/helm-chart
+helm upgrade --install aura kubernetes/helm-chart --namespace aura-platform
 
-# Verify deployment
+# Observe rollout
 kubectl get pods -n aura-platform
 ```
 
-## 📚 Documentation
+---
 
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Comprehensive deployment guide
-- [RESILIENCE_PATTERNS.md](RESILIENCE_PATTERNS.md) - Fault tolerance patterns
-- [SECRETS.md](SECRETS.md) - Secrets management guide
+## 📈 Operational Excellence
+- **Secrets Management** — `scripts/setup-vault.sh` bootstraps local KV v2, policies, and tenant paths.
+- **Observability Hooks** — Exposes metrics such as `celery_tasks_pending`, `llm_circuit_breaker_opens_total`, and `database_transaction_rollbacks_total`.
+- **Backpressure Controls** — API Gateway denies traffic when queues approach saturation (HTTP 503 with retry guidance).
+- **Idempotency Guarantees** — Redis-backed lock decorator prevents duplicate message processing across workers.
 
-## 🤝 Contributing
-
-We welcome contributions! Please see our contributing guidelines and code of conduct for details on how to get involved.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+---
 
 ## ✍️ Author
-
 This project is passionately crafted and maintained by **Mohammad Atashi**.
 
 ---
 
 <div align="center">
-  <strong>Built with ❤️ for the future of AI-powered e-commerce</strong>
+  <sub>Built with precision, resilience, and empathy for every conversation.</sub>
 </div>
