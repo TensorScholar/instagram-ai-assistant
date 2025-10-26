@@ -10,7 +10,7 @@ services:
     environment:
       POSTGRES_DB: aura_platform
       POSTGRES_USER: aura_user
-      POSTGRES_PASSWORD: aura_secure_password_2024
+      POSTGRES_PASSWORD: POSTGRES_PASSWORD_PLACEHOLDER
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
       - "5432:5432"
@@ -95,6 +95,26 @@ services:
     restart: unless-stopped
 
   # =============================================================================
+  # REDIS CACHE & CELERY BACKEND
+  # =============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: aura-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - aura-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+    command: redis-server --appendonly yes --requirepass REDIS_PASSWORD_PLACEHOLDER
+
+  # =============================================================================
   # MESSAGE QUEUE
   # =============================================================================
   rabbitmq:
@@ -102,7 +122,7 @@ services:
     container_name: aura-rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: aura_user
-      RABBITMQ_DEFAULT_PASS: aura_secure_password_2024
+      RABBITMQ_DEFAULT_PASS: RABBITMQ_PASSWORD_PLACEHOLDER
       RABBITMQ_DEFAULT_VHOST: aura_vhost
     ports:
       - "5672:5672"
@@ -157,11 +177,14 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=aura_platform
       - POSTGRES_USER=aura_user
-      - POSTGRES_PASSWORD=aura_secure_password_2024
+      - POSTGRES_PASSWORD=POSTGRES_PASSWORD_PLACEHOLDER
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=aura_user
-      - RABBITMQ_PASSWORD=aura_secure_password_2024
+      - RABBITMQ_PASSWORD=RABBITMQ_PASSWORD_PLACEHOLDER
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD_PLACEHOLDER
       - RABBITMQ_VHOST=aura_vhost
     ports:
       - "8000:8000"
@@ -174,8 +197,16 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    command: ["python", "-c", "print('API Gateway placeholder - Phase 0')"]
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    command: ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
   intelligence-worker:
     image: python:3.11-slim
@@ -187,14 +218,20 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=aura_platform
       - POSTGRES_USER=aura_user
-      - POSTGRES_PASSWORD=aura_secure_password_2024
+      - POSTGRES_PASSWORD=POSTGRES_PASSWORD_PLACEHOLDER
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=aura_user
-      - RABBITMQ_PASSWORD=aura_secure_password_2024
+      - RABBITMQ_PASSWORD=RABBITMQ_PASSWORD_PLACEHOLDER
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD_PLACEHOLDER
       - RABBITMQ_VHOST=aura_vhost
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD_PLACEHOLDER
     volumes:
       - ./src/intelligence_worker:/app
     networks:
@@ -206,8 +243,16 @@ services:
         condition: service_healthy
       milvus:
         condition: service_healthy
-    command: ["python", "-c", "print('Intelligence Worker placeholder - Phase 0')"]
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    command: ["python", "-m", "celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=4"]
 
   ingestion-worker:
     image: python:3.11-slim
@@ -219,14 +264,20 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=aura_platform
       - POSTGRES_USER=aura_user
-      - POSTGRES_PASSWORD=aura_secure_password_2024
+      - POSTGRES_PASSWORD=POSTGRES_PASSWORD_PLACEHOLDER
       - RABBITMQ_HOST=rabbitmq
       - RABBITMQ_PORT=5672
       - RABBITMQ_USER=aura_user
-      - RABBITMQ_PASSWORD=aura_secure_password_2024
+      - RABBITMQ_PASSWORD=RABBITMQ_PASSWORD_PLACEHOLDER
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD_PLACEHOLDER
       - RABBITMQ_VHOST=aura_vhost
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=REDIS_PASSWORD_PLACEHOLDER
     volumes:
       - ./src/ingestion_worker:/app
     networks:
@@ -238,8 +289,16 @@ services:
         condition: service_healthy
       milvus:
         condition: service_healthy
-    command: ["python", "-c", "print('Ingestion Worker placeholder - Phase 0')"]
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     restart: unless-stopped
+    command: ["python", "-m", "celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2"]
 
 # =============================================================================
 # VOLUMES
@@ -254,6 +313,8 @@ volumes:
   minio_data:
     driver: local
   rabbitmq_data:
+    driver: local
+  redis_data:
     driver: local
   vault_data:
     driver: local

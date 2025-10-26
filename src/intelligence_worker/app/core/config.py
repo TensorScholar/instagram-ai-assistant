@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     celery_timezone: str = Field(default="UTC", env="CELERY_TIMEZONE")
     celery_enable_utc: bool = Field(default=True, env="CELERY_ENABLE_UTC")
     
+    # Redis settings
+    redis_host: str = Field(default="redis", env="REDIS_HOST")
+    redis_port: int = Field(default=6379, env="REDIS_PORT")
+    redis_password: str = Field(env="REDIS_PASSWORD")
+    redis_db: int = Field(default=0, env="REDIS_DB")
+    
     # Worker settings
     worker_concurrency: int = Field(default=4, env="INTELLIGENCE_WORKER_CONCURRENCY")
     worker_prefetch_multiplier: int = Field(default=1, env="CELERY_WORKER_PREFETCH_MULTIPLIER")
