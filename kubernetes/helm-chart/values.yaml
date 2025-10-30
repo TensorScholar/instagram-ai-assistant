@@ -139,20 +139,7 @@ apiGateway:
     requests:
       cpu: 250m
       memory: 256Mi
-  env:
-    POSTGRES_HOST: "postgresql"
-    POSTGRES_PORT: "5432"
-    POSTGRES_DB: "aura_platform"
-    POSTGRES_USER: "aura_user"
-    RABBITMQ_HOST: "rabbitmq"
-    RABBITMQ_PORT: "5672"
-    RABBITMQ_USER: "aura_user"
-    REDIS_HOST: "redis-master"
-    REDIS_PORT: "6379"
-    SECRET_KEY: "CHANGE_ME_SECRET_KEY"
-    INSTAGRAM_APP_ID: "CHANGE_ME_INSTAGRAM_APP_ID"
-    INSTAGRAM_APP_SECRET: "CHANGE_ME_INSTAGRAM_APP_SECRET"
-    INSTAGRAM_WEBHOOK_VERIFY_TOKEN: "CHANGE_ME_WEBHOOK_TOKEN"
+  
   livenessProbe:
     httpGet:
       path: /info
@@ -179,20 +166,7 @@ intelligenceWorker:
     requests:
       cpu: 500m
       memory: 512Mi
-  env:
-    POSTGRES_HOST: "postgresql"
-    POSTGRES_PORT: "5432"
-    POSTGRES_DB: "aura_platform"
-    POSTGRES_USER: "aura_user"
-    RABBITMQ_HOST: "rabbitmq"
-    RABBITMQ_PORT: "5672"
-    RABBITMQ_USER: "aura_user"
-    REDIS_HOST: "redis-master"
-    REDIS_PORT: "6379"
-    MILVUS_HOST: "milvus"
-    MILVUS_PORT: "19530"
-    GEMINI_API_KEY: "CHANGE_ME_GEMINI_API_KEY"
-    OPENAI_API_KEY: "CHANGE_ME_OPENAI_API_KEY"
+  
   livenessProbe:
     exec:
       command:
@@ -223,18 +197,7 @@ ingestionWorker:
     requests:
       cpu: 250m
       memory: 256Mi
-  env:
-    POSTGRES_HOST: "postgresql"
-    POSTGRES_PORT: "5432"
-    POSTGRES_DB: "aura_platform"
-    POSTGRES_USER: "aura_user"
-    RABBITMQ_HOST: "rabbitmq"
-    RABBITMQ_PORT: "5672"
-    RABBITMQ_USER: "aura_user"
-    REDIS_HOST: "redis-master"
-    REDIS_PORT: "6379"
-    MILVUS_HOST: "milvus"
-    MILVUS_PORT: "19530"
+  
   livenessProbe:
     exec:
       command:

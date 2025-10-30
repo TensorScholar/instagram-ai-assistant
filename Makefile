@@ -65,7 +65,7 @@ test-unit: ## Run unit tests
 	@echo "🧪 Running unit tests..."
 	@for service in api_gateway intelligence_worker ingestion_worker shared_lib; do \
 		echo "Testing $$service..."; \
-		docker-compose exec -T $$service python -m pytest tests/ -v || true; \
+		docker-compose exec -T $$service poetry run pytest tests/ -v; \
 	done
 
 test-integration: ## Run integration tests
@@ -95,14 +95,14 @@ lint-check: ## Run linting (flake8)
 	@echo "🔍 Running flake8 linting..."
 	@for service in api_gateway intelligence_worker ingestion_worker shared_lib; do \
 		echo "Linting $$service..."; \
-		docker-compose exec -T $$service flake8 app/ || true; \
+		docker-compose exec -T $$service poetry run flake8 app/; \
 	done
 
 lint-format: ## Run code formatting (black)
 	@echo "🎨 Running black formatting..."
 	@for service in api_gateway intelligence_worker ingestion_worker shared_lib; do \
 		echo "Formatting $$service..."; \
-		docker-compose exec -T $$service black app/ || true; \
+		docker-compose exec -T $$service poetry run black app/; \
 	done
 
 lint-fix: ## Fix linting issues automatically
