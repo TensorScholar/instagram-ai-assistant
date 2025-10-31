@@ -69,7 +69,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         current_time = datetime.now()
         
         # Bypass rate limiting for info/health docs endpoints only (still allow back-pressure)
-        if request.url.path in ["/health", "/info", "/docs", "/redoc", "/openapi.json"]:
+        if request.url.path in ["/health", "/docs", "/redoc", "/openapi.json"]:
             return await call_next(request)
 
         # Clean up old requests

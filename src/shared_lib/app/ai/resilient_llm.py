@@ -277,7 +277,21 @@ class ResilientGeminiClient:
             return await asyncio.to_thread(_call_sync)
         except pybreaker.CircuitBreakerError:
             logger.error("Gemini circuit breaker is open - service degraded")
-            raise CircuitBreakerError("AI Subsystem Degraded - Gemini service unavailable")
+            # Create a compatible CircuitBreakerError instance for tests
+            try:
+                cb_err = CircuitBreakerError()
+                # attach minimal attributes expected by __str__
+                from types import SimpleNamespace
+                cb_err._circuit_breaker = SimpleNamespace(
+                    name="gemini",
+                    open_until=None,
+                    failure_count=self.circuit_breaker.fail_counter if hasattr(self.circuit_breaker, 'fail_counter') else 0,
+                    open_remaining=0,
+                    last_failure=None,
+                )
+                raise cb_err
+            except Exception:
+                raise CircuitBreakerError
         except Exception as e:
             logger.error(f"Gemini generation failed: {e}")
             raise
@@ -459,7 +473,19 @@ class ResilientOpenAIClient:
             return await asyncio.to_thread(_call_sync)
         except pybreaker.CircuitBreakerError:
             logger.error("OpenAI circuit breaker is open - service degraded")
-            raise CircuitBreakerError("AI Subsystem Degraded - OpenAI service unavailable")
+            try:
+                cb_err = CircuitBreakerError()
+                from types import SimpleNamespace
+                cb_err._circuit_breaker = SimpleNamespace(
+                    name="openai",
+                    open_until=None,
+                    failure_count=self.circuit_breaker.fail_counter if hasattr(self.circuit_breaker, 'fail_counter') else 0,
+                    open_remaining=0,
+                    last_failure=None,
+                )
+                raise cb_err
+            except Exception:
+                raise CircuitBreakerError
         except Exception as e:
             logger.error(f"OpenAI generation failed: {e}")
             raise
