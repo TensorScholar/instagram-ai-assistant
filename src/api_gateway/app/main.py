@@ -80,13 +80,7 @@ app.add_middleware(
 )
 
 # Add resilience middleware (order matters - last added is first executed)
-# Add BackPressure and RateLimit first, then HealthCheck last to short-circuit
-app.add_middleware(
-    BackPressureMiddleware,
-    rabbitmq_management_url=settings.rabbitmq_mgmt_url,
-    rabbitmq_username=settings.rabbitmq_mgmt_user,
-    rabbitmq_password=settings.rabbitmq_mgmt_password,
-)
+# Execute BackPressure before RateLimit; HealthCheck last to short-circuit
 app.add_middleware(
     RateLimitMiddleware,
     requests_per_minute=60,
@@ -96,6 +90,12 @@ app.add_middleware(
     redis_password=settings.redis_password,
     redis_db=settings.redis_db,
     trusted_proxy_subnets=settings.trusted_proxy_subnets,
+)
+app.add_middleware(
+    BackPressureMiddleware,
+    rabbitmq_management_url=settings.rabbitmq_mgmt_url,
+    rabbitmq_username=settings.rabbitmq_mgmt_user,
+    rabbitmq_password=settings.rabbitmq_mgmt_password,
 )
 app.add_middleware(HealthCheckMiddleware)
 
