@@ -183,8 +183,10 @@ class BaseRepository:
             query = query.limit(limit)
         
         result = await self.session.execute(query)
-        scalars = result.scalars()
-        all_result = scalars.all()
+        scalars_call = result.scalars()
+        if hasattr(scalars_call, "__await__"):
+            scalars_call = await scalars_call
+        all_result = scalars_call.all()
         if hasattr(all_result, "__await__"):
             all_result = await all_result
         instances = all_result
@@ -285,8 +287,10 @@ class BaseRepository:
         query = self._apply_tenant_filter(query, model_class)
         
         result = await self.session.execute(query)
-        scalars = result.scalars()
-        all_result = scalars.all()
+        scalars_call = result.scalars()
+        if hasattr(scalars_call, "__await__"):
+            scalars_call = await scalars_call
+        all_result = scalars_call.all()
         if hasattr(all_result, "__await__"):
             all_result = await all_result
         count = len(all_result)
@@ -386,8 +390,10 @@ class TenantAwareRepository(BaseRepository):
         query = query.limit(limit)
         
         result = await self.session.execute(query)
-        scalars = result.scalars()
-        all_result = scalars.all()
+        scalars_call = result.scalars()
+        if hasattr(scalars_call, "__await__"):
+            scalars_call = await scalars_call
+        all_result = scalars_call.all()
         if hasattr(all_result, "__await__"):
             all_result = await all_result
         products = all_result

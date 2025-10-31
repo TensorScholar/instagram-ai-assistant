@@ -152,7 +152,8 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
         # Find the session parameter in the function arguments
         session = None
         for arg in args:
-            if isinstance(arg, AsyncSession):
+            # Duck-typing to support AsyncMock in tests
+            if hasattr(arg, "begin") and hasattr(arg, "in_transaction"):
                 session = arg
                 break
         
@@ -167,7 +168,10 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
             )
         
         # Check if we're already in a transaction
-        if session.in_transaction():
+        in_tx = session.in_transaction()
+        if hasattr(in_tx, "__await__"):
+            in_tx = await in_tx
+        if in_tx:
             logger.debug(f"Function {func.__name__} already in transaction, executing directly")
             return await func(*args, **kwargs)
         

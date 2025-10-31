@@ -45,7 +45,7 @@ class TenantSecretsManager:
             ImportError: If hvac library is not available
             ValueError: If required parameters are missing
         """
-        if not HVAC_AVAILABLE:
+        if hvac is None:
             raise ImportError("hvac library is required for Vault integration")
         
         if not vault_url:

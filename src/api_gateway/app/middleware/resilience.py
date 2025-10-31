@@ -101,8 +101,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     await self._redis.expire(key, self.window_size)
                 return count <= self.requests_per_minute
             except Exception:
-                # fall back to in-memory
-                pass
+                # Redis not usable; permanently fall back to in-memory for this process
+                self._redis = None
         
         if client_ip not in self.requests:
             return True
@@ -212,7 +212,7 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
         current_time = datetime.now()
         
         # Check if we need to refresh queue data
-        if (current_time - self.last_check).seconds >= self.check_interval:
+        if (current_time - self.last_check).seconds >= self.check_interval or not self.queue_lengths:
             await self._update_queue_lengths()
             self.last_check = current_time
         
