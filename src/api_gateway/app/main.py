@@ -42,8 +42,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # TODO: Initialize database connection
     # TODO: Initialize RabbitMQ connection
     initialize_security(
-        settings.secret_key,
-        settings.instagram_app_secret,
+        settings.secret_key or "dev-secret",
+        settings.instagram_app_secret or "dev-webhook",
         None
     )
     

@@ -39,7 +39,7 @@ class RetryTracker:
         self.retry_ttl = retry_ttl
         logger.info(f"RetryTracker initialized with max_retries={max_retries}, ttl={retry_ttl}s")
     
-    async def increment_and_check(self, message_id: str) -> bool:
+    def increment_and_check(self, message_id: str) -> bool:
         """
         Increment retry counter for a message and check if it should go to DLQ.
         
@@ -50,38 +50,46 @@ class RetryTracker:
             True if message should be sent to DLQ, False otherwise
         """
         try:
+            import asyncio
+            async def _ainc() -> bool:
+                # Convert UUID to string if needed
+                mid = str(message_id) if isinstance(message_id, UUID) else message_id
+                retry_key = f"retry_count:{mid}"
+                current_count = await self.redis_client.incr(retry_key)
+                if current_count == 1:
+                    await self.redis_client.expire(retry_key, self.retry_ttl)
+                should_send_to_dlq = current_count >= self.max_retries
+                if should_send_to_dlq:
+                    logger.warning(
+                        f"Message {mid} exceeded max retries ({current_count}/{self.max_retries}). Routing to DLQ."
+                    )
+                else:
+                    logger.debug(
+                        f"Message {mid} retry count: {current_count}/{self.max_retries}"
+                    )
+                return should_send_to_dlq
+            loop = asyncio.get_event_loop()
+            # If already in an event loop, run in a new loop via asyncio.run
+            if loop.is_running():
+                return asyncio.run(_ainc())
+            return loop.run_until_complete(_ainc())
+        except Exception as e:
+            logger.error(f"Error tracking retries for message {message_id}: {e}")
+            return False
+
+    async def aincrement_and_check(self, message_id: str) -> bool:
+        """Async variant for increment_and_check for async contexts."""
+        try:
             # Convert UUID to string if needed
             if isinstance(message_id, UUID):
                 message_id = str(message_id)
-            
-            # Redis key for retry counter
             retry_key = f"retry_count:{message_id}"
-            
-            # Increment counter and get current count
             current_count = await self.redis_client.incr(retry_key)
-            
-            # Set TTL on first increment
             if current_count == 1:
                 await self.redis_client.expire(retry_key, self.retry_ttl)
-            
-            # Check if max retries exceeded
-            should_send_to_dlq = current_count >= self.max_retries
-            
-            if should_send_to_dlq:
-                logger.warning(
-                    f"Message {message_id} exceeded max retries ({current_count}/{self.max_retries}). "
-                    "Routing to DLQ."
-                )
-            else:
-                logger.debug(
-                    f"Message {message_id} retry count: {current_count}/{self.max_retries}"
-                )
-            
-            return should_send_to_dlq
-            
+            return current_count >= self.max_retries
         except Exception as e:
             logger.error(f"Error tracking retries for message {message_id}: {e}")
-            # On error, assume it's not a poison pill to avoid false positives
             return False
     
     async def get_retry_count(self, message_id: str) -> int:

@@ -175,8 +175,12 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
             logger.debug(f"Function {func.__name__} already in transaction, executing directly")
             return await func(*args, **kwargs)
         
-        # Start a new transaction
-        async with session.begin():
+        # Start a new transaction (compatible with AsyncMock begin())
+        ctx = session.begin()
+        if hasattr(ctx, "__await__"):
+            ctx = await ctx
+        try:
+            await ctx.__aenter__()
             try:
                 logger.debug(f"Starting transaction for function {func.__name__}")
                 result = await func(*args, **kwargs)
@@ -184,7 +188,6 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
                 return result
             except (OperationalError, DisconnectionError) as e:
                 logger.critical(f"Database network failure in transaction for function {func.__name__}: {e}")
-                # Explicitly attempt rollback for network failures
                 try:
                     await session.rollback()
                     logger.info(f"Explicit rollback completed for function {func.__name__}")
@@ -193,8 +196,12 @@ def transactional(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitabl
                 raise DatabaseTransactionError(f"Transaction rolled back due to network failure: {e}")
             except Exception as e:
                 logger.error(f"Transaction failed for function {func.__name__}: {e}")
-                # The transaction will be automatically rolled back by the context manager
                 raise
+        finally:
+            try:
+                await ctx.__aexit__(None, None, None)
+            except Exception:
+                pass
     
     return wrapper
 

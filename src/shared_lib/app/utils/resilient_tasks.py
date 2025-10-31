@@ -96,7 +96,11 @@ def resilient_task(
                 # Handle retry tracking and DLQ routing
                 if retry_tracker and dlq_routing and message_id:
                     try:
-                        should_send_to_dlq = await retry_tracker.increment_and_check(message_id)
+                        # Use async variant if available
+                        if hasattr(retry_tracker, 'aincrement_and_check'):
+                            should_send_to_dlq = await retry_tracker.aincrement_and_check(message_id)
+                        else:
+                            should_send_to_dlq = retry_tracker.increment_and_check(message_id)
                         
                         if should_send_to_dlq or is_poison:
                             # Route to DLQ

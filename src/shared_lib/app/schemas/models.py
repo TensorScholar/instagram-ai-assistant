@@ -87,6 +87,11 @@ class Tenant(Base, TimestampMixin):
         {"schema": "shared"},
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if getattr(self, "is_active", None) is None:
+            self.is_active = True
+
 
 class Product(Base, TimestampMixin, TenantMixin):
     """Product model for e-commerce products."""
@@ -136,6 +141,11 @@ class Product(Base, TimestampMixin, TenantMixin):
         {"schema": "tenants"},
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if getattr(self, "is_available", None) is None:
+            self.is_available = True
+
 
 class InstagramUser(Base, TimestampMixin, TenantMixin):
     """Instagram user model for tracking user interactions."""
@@ -174,6 +184,11 @@ class InstagramUser(Base, TimestampMixin, TenantMixin):
         Index("idx_instagram_users_last_interaction", "last_interaction"),
         {"schema": "tenants"},
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if getattr(self, "is_business_user", None) is None:
+            self.is_business_user = False
 
 
 class Conversation(Base, TimestampMixin, TenantMixin):

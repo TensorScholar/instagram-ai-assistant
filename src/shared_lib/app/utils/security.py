@@ -98,6 +98,8 @@ class SecurityManager:
         
         to_encode.update({"exp": expire})
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
+        if isinstance(encoded_jwt, bytes):
+            encoded_jwt = encoded_jwt.decode()
         
         logger.debug(f"Created access token for user {data.get('sub', 'unknown')}")
         return encoded_jwt
