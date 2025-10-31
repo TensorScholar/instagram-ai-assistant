@@ -21,11 +21,19 @@ def get_redis_url(host: str, port: int, password: str, db: int = 0) -> str:
     """Construct Redis URL from discrete components."""
     return f"redis://:{password}@{host}:{port}/{db}"
 
-# Create Celery application with Redis backend
+# Create Celery application using RabbitMQ broker and RPC result backend
+def _amqp_url() -> str:
+    user = settings.rabbitmq_user
+    pwd = settings.rabbitmq_password
+    host = settings.rabbitmq_host
+    port = settings.rabbitmq_port
+    vhost = settings.rabbitmq_vhost
+    return f"amqp://{user}:{pwd}@{host}:{port}/{vhost}"
+
 celery_app = Celery(
     "intelligence_worker",
-    broker=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password),
-    backend=get_redis_url(settings.redis_host, settings.redis_port, settings.redis_password, settings.redis_db),
+    broker=_amqp_url(),
+    backend="rpc://",
     include=[
         "app.tasks.message_processing",
         "app.tasks.resilient_ai_processing",

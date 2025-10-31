@@ -3,15 +3,20 @@ Aura Platform - API Gateway Middleware
 Rate limiting and back-pressure middleware for the API Gateway.
 """
 
-import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from datetime import datetime, timedelta
 
 from fastapi import Request, Response, HTTPException
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import httpx
+import ipaddress
+try:
+    import redis.asyncio as redis
+except Exception:
+    redis = None  # Optional dependency
+from ..core.config import settings as api_settings
 
 logger = logging.getLogger(__name__)
 
@@ -21,16 +26,43 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Rate limiting middleware using sliding window algorithm.
     """
     
-    def __init__(self, app, requests_per_minute: int = 60, window_size: int = 60):
+    def __init__(
+        self,
+        app,
+        requests_per_minute: int = 60,
+        window_size: int = 60,
+        use_redis: bool = False,
+        redis_host: Optional[str] = None,
+        redis_port: int = 6379,
+        redis_password: Optional[str] = None,
+        redis_db: int = 0,
+        key_prefix: str = "ratelimit",
+        trusted_proxy_headers: Optional[List[str]] = None,
+    ):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
         self.window_size = window_size
         self.requests: Dict[str, list] = {}
+        self._max_keys = 10000  # bound memory
         self._cleanup_task = None
+        self.key_prefix = key_prefix
+        self.trusted_proxy_headers = trusted_proxy_headers or ["X-Forwarded-For"]
+        self._redis = None
+        if use_redis and redis is not None and redis_host:
+            try:
+                self._redis = redis.Redis(
+                    host=redis_host,
+                    port=redis_port,
+                    password=redis_password,
+                    db=redis_db,
+                    decode_responses=True,
+                )
+            except Exception:
+                self._redis = None
         
     async def dispatch(self, request: Request, call_next):
         """Process request with rate limiting."""
-        client_ip = request.client.host if request.client else "unknown"
+        client_ip = self._get_client_ip(request)
         current_time = datetime.now()
         
         # Clean up old requests
@@ -56,37 +88,55 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     
     async def _check_rate_limit(self, client_ip: str, current_time: datetime) -> bool:
         """Check if client has exceeded rate limit."""
+        # Redis fixed window per-minute key
+        if self._redis:
+            try:
+                window = current_time.replace(second=0, microsecond=0).isoformat()
+                key = f"{self.key_prefix}:{client_ip}:{window}"
+                count = await self._redis.incr(key)
+                if count == 1:
+                    await self._redis.expire(key, self.window_size)
+                return count <= self.requests_per_minute
+            except Exception:
+                # fall back to in-memory
+                pass
+        
         if client_ip not in self.requests:
             return True
-        
-        # Count requests in the last window
         window_start = current_time - timedelta(seconds=self.window_size)
-        recent_requests = [
-            req_time for req_time in self.requests[client_ip]
-            if req_time > window_start
-        ]
-        
+        recent_requests = [t for t in self.requests[client_ip] if t > window_start]
         return len(recent_requests) < self.requests_per_minute
     
     async def _record_request(self, client_ip: str, current_time: datetime):
         """Record a request for the client."""
+        if self._redis:
+            return  # already counted
         if client_ip not in self.requests:
+            # bound keys to avoid unbounded growth
+            if len(self.requests) >= self._max_keys:
+                # remove oldest key
+                oldest = next(iter(self.requests))
+                self.requests.pop(oldest, None)
             self.requests[client_ip] = []
         self.requests[client_ip].append(current_time)
     
     async def _cleanup_old_requests(self, current_time: datetime):
         """Clean up old request records."""
         cutoff_time = current_time - timedelta(seconds=self.window_size * 2)
-        
         for client_ip in list(self.requests.keys()):
-            self.requests[client_ip] = [
-                req_time for req_time in self.requests[client_ip]
-                if req_time > cutoff_time
-            ]
-            
-            # Remove empty entries
+            self.requests[client_ip] = [t for t in self.requests[client_ip] if t > cutoff_time]
             if not self.requests[client_ip]:
-                del self.requests[client_ip]
+                self.requests.pop(client_ip, None)
+
+    def _get_client_ip(self, request: Request) -> str:
+        # Prefer trusted proxy header if present
+        for header in self.trusted_proxy_headers:
+            xff = request.headers.get(header)
+            if xff:
+                # pick first IP
+                client = xff.split(",")[0].strip()
+                return client
+        return request.client.host if request.client else "unknown"
 
 
 class BackPressureMiddleware(BaseHTTPMiddleware):
@@ -189,6 +239,23 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         """Process request, bypassing middleware for health checks."""
         if request.url.path in self.health_paths:
+            # Short-circuit minimal responses for /health and /info
+            if request.url.path == "/health":
+                return JSONResponse({
+                    "status": "healthy",
+                    "service": "api_gateway",
+                    "version": api_settings.app_version,
+                    "environment": api_settings.environment,
+                })
+            if request.url.path == "/info":
+                return JSONResponse({
+                    "service": "api_gateway",
+                    "version": api_settings.app_version,
+                    "environment": api_settings.environment,
+                    "debug": api_settings.debug,
+                    "host": api_settings.host,
+                    "port": api_settings.port,
+                })
             return await call_next(request)
         
         # For non-health endpoints, continue with other middleware

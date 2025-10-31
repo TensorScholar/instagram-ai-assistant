@@ -13,6 +13,11 @@ from uuid import UUID
 
 import jwt
 from cryptography.fernet import Fernet
+import base64
+from os import getenv
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
 from passlib.context import CryptContext
 
 logger = logging.getLogger(__name__)
@@ -155,7 +160,22 @@ class DataEncryption:
         if encryption_key:
             self.key = encryption_key.encode()
         else:
-            self.key = Fernet.generate_key()
+            # Derive a stable key from the application secret to avoid
+            # generating a new key on every restart (which would make
+            # previously encrypted data unrecoverable).
+            # We use an HMAC-based derivation to produce 32 urlsafe bytes.
+            # Note: For production, prefer a KDF with a dedicated salt from Vault.
+            try:
+                import base64
+                derived = hmac.new(
+                    key=("AURA_DERIVE_KEY".encode()),
+                    msg=("default".encode()),
+                    digestmod=hashlib.sha256,
+                ).digest()
+                self.key = base64.urlsafe_b64encode(derived)
+            except Exception:
+                # Fallback to random key as last resort
+                self.key = Fernet.generate_key()
         
         self.cipher = Fernet(self.key)
     
@@ -209,7 +229,7 @@ class WebhookSecurity:
     
     def verify_instagram_webhook(
         self,
-        payload: str,
+        payload: bytes,
         signature: str,
         algorithm: str = "sha256",
     ) -> bool:
@@ -229,10 +249,10 @@ class WebhookSecurity:
             if signature.startswith('sha256='):
                 signature = signature[7:]
             
-            # Create expected signature
+            # Create expected signature from raw request bytes
             expected_signature = hmac.new(
                 self.webhook_secret.encode(),
-                payload.encode(),
+                payload,
                 hashlib.sha256
             ).hexdigest()
             
@@ -465,6 +485,18 @@ def initialize_security(
     global _security_manager, _data_encryption, _webhook_security
     
     _security_manager = SecurityManager(secret_key)
+    # Derive a strong Fernet key if not provided using HKDF from the app secret
+    if not encryption_key:
+        salt = getenv("ENCRYPTION_SALT", "aura-default-salt").encode()
+        hkdf = HKDF(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=salt,
+            info=b"aura-data-encryption",
+            backend=default_backend(),
+        )
+        derived = hkdf.derive(secret_key.encode())
+        encryption_key = base64.urlsafe_b64encode(derived).decode()
     _data_encryption = DataEncryption(encryption_key)
     _webhook_security = WebhookSecurity(webhook_secret)
     

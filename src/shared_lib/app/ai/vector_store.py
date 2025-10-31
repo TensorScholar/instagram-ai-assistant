@@ -255,25 +255,46 @@ class TenantAwareVectorStore:
                 collection.create_partition(partition_name)
                 logger.info(f"Created partition {partition_name} for tenant {tenant_id}")
             
-            # Prepare data
-            data = []
+            # Prepare columnar data matching schema order
+            ids = []
+            tenant_ids = []
+            product_ids = []
+            external_ids = []
+            titles = []
+            descriptions = []
+            prices = []
+            currencies = []
+            categories = []
+            tags_list = []
+            vectors = []
             for product, embedding in zip(products, embeddings):
-                data.append({
-                    "id": f"{tenant_id}_{product.id}",
-                    "tenant_id": str(tenant_id),
-                    "product_id": str(product.id),
-                    "external_id": product.external_id,
-                    "title": product.title,
-                    "description": product.description or "",
-                    "price": product.price or 0.0,
-                    "currency": product.currency,
-                    "category": product.category or "",
-                    "tags": ",".join(product.tags) if product.tags else "",
-                    "embedding_vector": embedding,
-                })
+                ids.append(f"{tenant_id}_{product.id}")
+                tenant_ids.append(str(tenant_id))
+                product_ids.append(str(product.id))
+                external_ids.append(product.external_id)
+                titles.append(product.title)
+                descriptions.append(product.description or "")
+                prices.append(float(product.price or 0.0))
+                currencies.append(product.currency)
+                categories.append(product.category or "")
+                tags_list.append(",".join(product.tags) if product.tags else "")
+                vectors.append(embedding)
             
-            # Insert data into partition
-            collection.insert(data, partition_name=partition_name)
+            # Insert data into partition (column-based)
+            entities = [
+                ids,
+                tenant_ids,
+                product_ids,
+                external_ids,
+                titles,
+                descriptions,
+                prices,
+                currencies,
+                categories,
+                tags_list,
+                vectors,
+            ]
+            collection.insert(entities, partition_name=partition_name)
             collection.flush()
             
             logger.info(f"Added {len(products)} products to vector store for tenant {tenant_id}")

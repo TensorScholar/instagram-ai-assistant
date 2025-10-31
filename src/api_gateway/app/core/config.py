@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     rabbitmq_user: str = Field(default="aura_user")
     rabbitmq_password: str = Field()
     rabbitmq_vhost: str = Field(default="aura_vhost")
+    # RabbitMQ management API (for back-pressure)
+    rabbitmq_mgmt_url: str = Field(default="http://rabbitmq:15672")
+    rabbitmq_mgmt_user: str = Field(default="guest")
+    rabbitmq_mgmt_password: str = Field(default="guest")
     
     # Security settings
     secret_key: str = Field()
@@ -58,6 +62,12 @@ class Settings(BaseSettings):
         default=["http://localhost:3000"]
     )
     cors_allow_credentials: bool = Field(default=True)
+    
+    # Redis settings (optional for distributed rate limiting)
+    redis_host: str = Field(default="redis")
+    redis_port: int = Field(default=6379)
+    redis_password: Optional[str] = Field(default=None)
+    redis_db: int = Field(default=0)
     
     # Logging settings
     log_level: str = Field(default="INFO")

@@ -137,7 +137,7 @@ async def handle_instagram_webhook(
         
         webhook_security = get_webhook_security()
         if not webhook_security.verify_instagram_webhook(
-            raw_body.decode(), signature
+            raw_body, signature
         ):
             logger.warning("Instagram webhook signature verification failed")
             raise HTTPException(

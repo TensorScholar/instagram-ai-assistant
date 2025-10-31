@@ -21,7 +21,8 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy.orm import DeclarativeBase, Session
 from sqlalchemy.pool import NullPool, QueuePool
 
-from .core.config import settings
+from ..core.config import settings
+from ..schemas.models import Base
 
 logger = logging.getLogger(__name__)
 
@@ -511,7 +512,7 @@ class DatabaseHealthChecker:
             True if tenant isolation is working, False otherwise
         """
         try:
-            from .schemas.models import Tenant
+            from ..schemas.models import Tenant
             
             async with self.db_manager.get_session() as session:
                 # Try to access tenant data

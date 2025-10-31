@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     redis_password: str = Field(env="REDIS_PASSWORD")
     redis_db: int = Field(default=0, env="REDIS_DB")
     
+    # RabbitMQ settings (for Celery broker)
+    rabbitmq_host: str = Field(default="rabbitmq", env="RABBITMQ_HOST")
+    rabbitmq_port: int = Field(default=5672, env="RABBITMQ_PORT")
+    rabbitmq_user: str = Field(default="aura_user", env="RABBITMQ_USER")
+    rabbitmq_password: str = Field(env="RABBITMQ_PASSWORD")
+    rabbitmq_vhost: str = Field(default="aura_vhost", env="RABBITMQ_VHOST")
+    
     # Worker settings
     worker_concurrency: int = Field(default=20, env="INTELLIGENCE_WORKER_CONCURRENCY")
     worker_prefetch_multiplier: int = Field(default=1, env="CELERY_WORKER_PREFETCH_MULTIPLIER")

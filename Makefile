@@ -80,7 +80,7 @@ test-coverage: ## Run tests with coverage
 	@echo "🧪 Running tests with coverage..."
 	@for service in api_gateway intelligence_worker ingestion_worker shared_lib; do \
 		echo "Testing $$service with coverage..."; \
-		docker-compose exec -T $$service python -m pytest tests/ --cov=app --cov-report=html || true; \
+		docker-compose exec -T $$service poetry run pytest tests/ --cov=app --cov-report=html; \
 	done
 
 # =============================================================================
@@ -157,7 +157,7 @@ db-reset: ## Reset database (WARNING: This will delete all data)
 	@echo "⚠️  WARNING: This will delete all database data!"
 	@read -p "Are you sure? [y/N]: " confirm && [ "$$confirm" = "y" ]
 	docker-compose down
-	docker volume rm aura-platform_postgres_data || true
+	docker volume rm aura-platform_postgres_data
 	docker-compose up -d postgres
 	@echo "✅ Database reset completed"
 

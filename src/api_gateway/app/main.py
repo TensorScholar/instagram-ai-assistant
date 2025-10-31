@@ -80,9 +80,23 @@ app.add_middleware(
 )
 
 # Add resilience middleware (order matters - last added is first executed)
+# Add BackPressure and RateLimit first, then HealthCheck last to short-circuit
+app.add_middleware(
+    BackPressureMiddleware,
+    rabbitmq_management_url=settings.rabbitmq_mgmt_url,
+    rabbitmq_username=settings.rabbitmq_mgmt_user,
+    rabbitmq_password=settings.rabbitmq_mgmt_password,
+)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=60,
+    use_redis=True,
+    redis_host=settings.redis_host,
+    redis_port=settings.redis_port,
+    redis_password=settings.redis_password,
+    redis_db=settings.redis_db,
+)
 app.add_middleware(HealthCheckMiddleware)
-app.add_middleware(BackPressureMiddleware)
-app.add_middleware(RateLimitMiddleware, requests_per_minute=60)
 
 # Include routers
 app.include_router(webhooks.router)
@@ -100,14 +114,16 @@ async def global_exception_handler(request, exc):
     Returns:
         JSON error response
     """
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    import uuid
+    request_id = request.headers.get("X-Request-Id") or str(uuid.uuid4())
+    logger.error(f"Unhandled exception [{request_id}]: {exc}", exc_info=True)
     
     return JSONResponse(
         status_code=500,
         content={
             "error": "Internal server error",
             "message": "An unexpected error occurred",
-            "request_id": "unknown",  # TODO: Add request ID tracking
+            "request_id": request_id,
         }
     )
 

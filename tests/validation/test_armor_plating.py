@@ -17,6 +17,7 @@ from datetime import datetime
 import httpx
 import sqlalchemy.exc
 from pybreaker import CircuitBreakerError
+from src.shared_lib.app.utils.security import WebhookSecurity
 
 
 class DatabaseTransactionError(Exception):
@@ -474,6 +475,21 @@ def test_pipeline3_circuit_breaker_opens_on_timeout():
     """Test Case 3.1: Circuit Breaker Opens on Timeout"""
     result = Pipeline3AIPipelineChaosValidation.test_circuit_breaker_opens_on_timeout()
     assert result["passed"], f"Circuit breaker test failed: {result}"
+
+
+def test_webhook_signature_verification_uses_raw_bytes():
+    """Validate that Instagram webhook verification uses raw bytes HMAC.
+    """
+    secret = "test_secret_key_for_webhooks"
+    payload = b'{"object":"instagram","entry":[]}'
+    import hashlib, hmac
+    expected = hmac.new(secret.encode(), payload, hashlib.sha256).hexdigest()
+    wh = WebhookSecurity(secret)
+    # header format includes sha256=
+    assert wh.verify_instagram_webhook(payload, f"sha256={expected}")
+    # tamper one byte
+    tampered = payload + b" "
+    assert not wh.verify_instagram_webhook(tampered, f"sha256={expected}")
 
 
 def test_pipeline3_poison_pill_is_correctly_routed_to_dlq():

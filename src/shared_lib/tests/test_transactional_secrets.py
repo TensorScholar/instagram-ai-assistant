@@ -9,6 +9,8 @@ from uuid import uuid4, UUID
 
 from shared_lib.app.db.database import transactional, TransactionalContext
 from shared_lib.app.utils.secrets import TenantSecretsManager, create_secrets_manager
+from shared_lib.app.utils.security import initialize_security, get_data_encryption
+import os
 
 
 class TestTransactionalDecorator:
@@ -387,6 +389,20 @@ class TestIntegration:
         # Verify transaction was started
         mock_session.begin.assert_called_once()
 
+
+@pytest.mark.asyncio
+async def test_initialize_security_hkdf_derivation_roundtrip(monkeypatch):
+    """Verify HKDF-derived encryption key produces stable encrypt/decrypt roundtrip."""
+    # Fixed salt for deterministic derivation in test
+    monkeypatch.setenv("ENCRYPTION_SALT", "unit-test-salt")
+    # Initialize without explicit encryption key
+    initialize_security(secret_key="root-secret", webhook_secret="whsec")
+    enc = get_data_encryption()
+    plaintext = "sensitive-data"
+    ciphertext = enc.encrypt_data(plaintext)
+    assert ciphertext and isinstance(ciphertext, str)
+    decrypted = enc.decrypt_data(ciphertext)
+    assert decrypted == plaintext
 
 if __name__ == "__main__":
     pytest.main([__file__])

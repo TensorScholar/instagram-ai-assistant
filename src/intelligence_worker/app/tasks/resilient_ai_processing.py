@@ -17,7 +17,7 @@ from shared_lib.app.ai.resilient_llm import (
     LLMError,
     CircuitBreakerError,
 )
-from shared_lib.app.ai.rag_pipeline import RAGPipeline
+from shared_lib.app.ai.rag_pipeline import TenantAwareRAGPipeline
 from shared_lib.app.schemas.models import Message, Conversation, Product
 from shared_lib.app.db.database import transactional
 from shared_lib.app.db.repository import TenantAwareRepository
@@ -77,10 +77,8 @@ class ResilientAIProcessingTask(Task):
                 openai_api_key=openai_api_key,
             )
             
-            # Initialize RAG pipeline if enabled
+            # RAG pipeline is currently disabled until properly initialized via service startup
             rag_pipeline = None
-            if rag_enabled:
-                rag_pipeline = RAGPipeline(tenant_id=tenant_uuid)
             
             # Process message with AI
             ai_response = await self._generate_ai_response(
@@ -127,7 +125,7 @@ class ResilientAIProcessingTask(Task):
     async def _generate_ai_response(
         self,
         llm_orchestrator: ResilientLLMOrchestrator,
-        rag_pipeline: Optional[RAGPipeline],
+        rag_pipeline: Optional[TenantAwareRAGPipeline],
         message_content: str,
         tenant_id: UUID,
     ) -> str:
@@ -147,16 +145,8 @@ class ResilientAIProcessingTask(Task):
             # Build system prompt
             system_prompt = self._build_system_prompt(tenant_id)
             
-            # Get context from RAG pipeline if available
+            # Context retrieval currently disabled
             context = ""
-            if rag_pipeline:
-                try:
-                    context = await rag_pipeline.get_context_for_query(
-                        query=message_content,
-                        tenant_id=tenant_id,
-                    )
-                except Exception as e:
-                    logger.warning(f"RAG pipeline failed, proceeding without context: {e}")
             
             # Build full prompt
             if context:

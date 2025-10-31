@@ -23,13 +23,12 @@ from tenacity import (
     after_log,
 )
 import pybreaker
-from circuit_breaker import CircuitBreakerError
+from circuitbreaker import CircuitBreakerError
 import httpx
 import openai
 
 from .embeddings import EmbeddingGenerator, EmbeddingConfig, EmbeddingModel
 from ..schemas.models import Product, Conversation, Message
-from ..utils.security import generate_secure_token
 
 logger = logging.getLogger(__name__)
 

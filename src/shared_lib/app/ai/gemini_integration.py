@@ -106,17 +106,9 @@ class BrandVoiceManager:
             Brand voice configuration
         """
         try:
-            repository = get_repository()
-            tenant = repository.get_by_id(Tenant, tenant_id, tenant_id)
-            
-            if tenant and tenant.brand_voice_config:
-                # Merge with default config
-                voice_config = self.default_voice_config.copy()
-                voice_config.update(tenant.brand_voice_config)
-                return voice_config
-            
+            # Avoid async DB calls in a sync method; return default for now.
+            # Future improvement: cache brand voice per tenant populated asynchronously.
             return self.default_voice_config
-            
         except Exception as e:
             logger.error(f"Error getting tenant voice config: {e}")
             return self.default_voice_config
@@ -142,10 +134,7 @@ class BrandVoiceManager:
         """
         try:
             voice_config = self.get_tenant_voice_config(tenant_id)
-            repository = get_repository()
-            tenant = repository.get_by_id(Tenant, tenant_id, tenant_id)
-            
-            tenant_name = tenant.name if tenant else "our store"
+            tenant_name = "our store"
             
             # Create brand-aware prompt
             brand_prompt = f"""You are an AI assistant for {tenant_name}. 
