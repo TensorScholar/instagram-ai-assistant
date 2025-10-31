@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 @message_task(name="process_instagram_direct_message")
-def process_instagram_direct_message(event_data: Dict[str, Any]) -> Dict[str, Any]:
+def process_instagram_direct_message(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Process an Instagram direct message event.
     
@@ -114,6 +114,7 @@ def process_instagram_direct_message(event_data: Dict[str, Any]) -> Dict[str, An
 
 @intelligence_task(name="process_ai_query")
 def process_ai_query(
+    self,
     query_text: str,
     tenant_id: str,
     instagram_user_id: str,
@@ -174,6 +175,7 @@ def process_ai_query(
 
 @intelligence_task(name="generate_product_recommendations")
 def generate_product_recommendations(
+    self,
     query_text: str,
     tenant_id: str,
     limit: int = 5,
@@ -342,7 +344,7 @@ def _create_mock_product_recommendations(limit: int) -> list:
 
 # Task for logging events to database
 @intelligence_task(name="log_event_to_database")
-def log_event_to_database(event_data: Dict[str, Any]) -> Dict[str, Any]:
+def log_event_to_database(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Log an event to the database.
     

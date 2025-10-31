@@ -4,7 +4,7 @@
 
 ![Aura Logo](https://img.shields.io/badge/Aura-AI%20Assistant-blue?style=for-the-badge&logo=sparkles)
 
-**AI-powered Instagram commerce assistant that actually works**
+**AI-powered Instagram commerce assistant**
 
 [![Python](https://img.shields.io/badge/Python-3.12+-3776ab?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
@@ -18,13 +18,13 @@
 
 ## 🎯 Overview
 
-Aura transforms Instagram DMs into intelligent shopping experiences. Built for scale, security, and reliability.
+Aura turns Instagram DMs into guided shopping conversations. The system is designed with scalability, security, and reliability in mind.
 
-**What it does:**
-- 🤖 **Smart Conversations** - AI that understands your products and customers
-- 🏢 **Multi-Tenant** - Secure isolation for multiple businesses
-- 🛡️ **Production Ready** - Circuit breakers, retries, monitoring
-- 📈 **Auto-Scaling** - Handles thousands of conversations
+**Key capabilities:**
+- 🤖 **Smart Conversations** - AI-assisted replies with product context
+- 🏢 **Multi-Tenant** - Per-tenant data isolation
+- 🛡️ **Resilience** - Circuit breakers, retries, health checks
+- 📈 **Scalability** - Horizontal scale-out via workers and queues
 
 ---
 
@@ -68,8 +68,6 @@ make dev-up
 # 3. Verify it's running
 make health-check
 ```
-
-**That's it!** Your AI assistant is now running locally.
 
 ---
 
@@ -150,41 +148,32 @@ kubectl get pods -n aura-platform   # Monitor
 
 ---
 
-## 📊 Performance
-
-- **Response Time**: < 2 seconds
-- **Throughput**: 1000+ messages/minute
-- **Availability**: 99.9% uptime
-- **Scalability**: Linear scaling
-
----
-
 ## 🔒 Security
 
-- ✅ Multi-tenant data isolation
-- ✅ HashiCorp Vault integration
-- ✅ Webhook signature verification
-- ✅ Input validation & sanitization
-- ✅ Audit logging
+Includes support for:
+- Per-tenant data isolation
+- Vault-based secret management
+- Webhook signature verification
+- Input validation & sanitization
 
 ---
 
-## 📈 Monitoring
+## 📈 Observability
 
-Built-in metrics for:
-- Queue depths and processing times
+Hooks available for:
+- Queue depth and processing metrics
 - AI API response times and errors
-- Database connection pool usage
-- Circuit breaker states
+- Database connection pool monitoring
+- Circuit breaker state tracking
 
 ---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
+2. Create a feature branch: `git checkout -b feature/your-change`
+3. Commit changes: `git commit -m 'Describe your change'`
+4. Push to branch: `git push origin feature/your-change`
 5. Open a Pull Request
 
 ---
@@ -199,12 +188,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Mohammad Atashi** - [@TensorScholar](https://github.com/TensorScholar)
 
----
-
 <div align="center">
 
 **⭐ Star this repo if you find it useful!**
-
-Made with ❤️ for the future of AI-powered commerce
 
 </div>

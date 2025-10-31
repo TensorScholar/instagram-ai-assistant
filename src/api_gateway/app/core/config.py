@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     rabbitmq_user: str = Field(default="aura_user")
     rabbitmq_password: str = Field()
     rabbitmq_vhost: str = Field(default="aura_vhost")
+    # RabbitMQ management API (for back-pressure)
+    rabbitmq_mgmt_url: str = Field(default="http://rabbitmq:15672")
+    rabbitmq_mgmt_user: str = Field(default="guest")
+    rabbitmq_mgmt_password: str = Field(default="guest")
     
     # Security settings
     secret_key: str = Field()

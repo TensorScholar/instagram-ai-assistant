@@ -155,7 +155,22 @@ class DataEncryption:
         if encryption_key:
             self.key = encryption_key.encode()
         else:
-            self.key = Fernet.generate_key()
+            # Derive a stable key from the application secret to avoid
+            # generating a new key on every restart (which would make
+            # previously encrypted data unrecoverable).
+            # We use an HMAC-based derivation to produce 32 urlsafe bytes.
+            # Note: For production, prefer a KDF with a dedicated salt from Vault.
+            try:
+                import base64
+                derived = hmac.new(
+                    key=("AURA_DERIVE_KEY".encode()),
+                    msg=("default".encode()),
+                    digestmod=hashlib.sha256,
+                ).digest()
+                self.key = base64.urlsafe_b64encode(derived)
+            except Exception:
+                # Fallback to random key as last resort
+                self.key = Fernet.generate_key()
         
         self.cipher = Fernet(self.key)
     

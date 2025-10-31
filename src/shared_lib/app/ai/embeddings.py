@@ -18,6 +18,7 @@ import numpy as np
 # Import embedding libraries
 try:
     import openai
+    from openai import AsyncOpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -275,29 +276,25 @@ class EmbeddingGenerator:
         return text
         
     async def _generate_openai_embeddings(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings using OpenAI API"""
-        embeddings = []
-        
+        """Generate embeddings using OpenAI v1 Async client"""
+        embeddings: List[List[float]] = []
+        client = AsyncOpenAI(api_key=self.config.api_key)  # uses env if None
+        model = self.config.model.value
         for text in texts:
             for attempt in range(self.config.max_retries):
                 try:
-                    response = await asyncio.to_thread(
-                        openai.Embedding.create,
+                    resp = await client.embeddings.create(
+                        model=model,
                         input=text,
-                        model=self.config.model.value,
-                        dimensions=self.config.dimensions
+                        dimensions=self.config.dimensions,
                     )
-                    
-                    embedding = response['data'][0]['embedding']
-                    embeddings.append(embedding)
+                    embeddings.append(resp.data[0].embedding)
                     break
-                    
                 except Exception as e:
                     logger.warning(f"OpenAI embedding attempt {attempt + 1} failed: {e}")
                     if attempt == self.config.max_retries - 1:
                         raise
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                    
+                    await asyncio.sleep(2 ** attempt)
         return embeddings
         
     async def _generate_sentence_transformer_embeddings(self, texts: List[str]) -> List[List[float]]:
