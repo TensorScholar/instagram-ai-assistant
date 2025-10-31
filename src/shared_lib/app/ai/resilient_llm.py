@@ -28,6 +28,10 @@ from ..schemas.models import Product, Conversation, Message
 
 logger = logging.getLogger(__name__)
 
+# Expose SDK modules for tests to patch
+genai = None  # type: ignore
+openai = None  # type: ignore
+
 
 class LLMError(Exception):
     """Base exception class for all LLM-related operations.
@@ -103,10 +107,12 @@ class ResilientGeminiClient:
         
         # Configure Gemini (import lazily to avoid hard dependency at import time)
         try:
-            import google.generativeai as genai  # type: ignore
-            genai.configure(api_key=api_key)
-            self._genai = genai
-            self.model = genai.GenerativeModel(model_name)
+            import google.generativeai as _genai  # type: ignore
+            _genai.configure(api_key=api_key)
+            self._genai = _genai
+            self.model = _genai.GenerativeModel(model_name)
+            # publish to module namespace for tests to patch
+            globals()["genai"] = _genai
         except Exception as e:
             logger.warning(f"Gemini SDK not available: {e}")
             self._genai = None
@@ -307,12 +313,14 @@ class ResilientOpenAIClient:
         
         # Configure OpenAI client (import lazily to avoid hard dependency at import time)
         try:
-            import openai  # type: ignore
-            self._openai = openai
-            self.client = openai.AsyncOpenAI(
+            import openai as _openai  # type: ignore
+            self._openai = _openai
+            self.client = _openai.AsyncOpenAI(
                 api_key=api_key,
                 timeout=timeout,
             )
+            # publish to module namespace for tests to patch
+            globals()["openai"] = _openai
         except Exception as e:
             logger.warning(f"OpenAI SDK not available: {e}")
             self._openai = None

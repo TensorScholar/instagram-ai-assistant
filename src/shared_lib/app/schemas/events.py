@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator, ConfigDict, model_validator
 
 
 class EventType(str, Enum):
@@ -75,12 +75,12 @@ class InstagramDirectMessageReceived(BaseEvent):
     is_business_message: bool = Field(default=True)
     reply_to_message_id: Optional[str] = None
     
-    @field_validator('message_text')
-    def validate_message_content(cls, v, values):
-        """Validate that either text or media is present."""
-        if not v and not values.data.get('media_urls'):
+    @model_validator(mode='after')
+    def _validate_content(self) -> 'InstagramDirectMessageReceived':
+        """Ensure either message_text or media_urls is provided."""
+        if not self.message_text and not self.media_urls:
             raise ValueError('Either message_text or media_urls must be provided')
-        return v
+        return self
 
 
 class InstagramDirectMessageSent(BaseEvent):

@@ -232,8 +232,13 @@ class TransactionalContext:
     
     async def __aenter__(self):
         """Enter the transactional context."""
-        if not self.session.in_transaction():
+        in_tx = self.session.in_transaction()
+        if hasattr(in_tx, "__await__"):
+            in_tx = await in_tx
+        if not in_tx:
             self.transaction = self.session.begin()
+            if hasattr(self.transaction, "__await__"):
+                self.transaction = await self.transaction
             await self.transaction.__aenter__()
             logger.debug("Started manual transaction")
         return self

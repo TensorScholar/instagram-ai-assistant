@@ -260,7 +260,7 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app, health_paths: list = None):
         super().__init__(app)
-        self.health_paths = health_paths or ["/health", "/info", "/docs", "/redoc", "/openapi.json"]
+        self.health_paths = health_paths or ["/health", "/docs", "/redoc", "/openapi.json"]
     
     async def dispatch(self, request: Request, call_next):
         """Process request, bypassing middleware for health checks."""

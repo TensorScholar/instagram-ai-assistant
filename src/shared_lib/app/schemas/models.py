@@ -89,6 +89,8 @@ class Tenant(Base, TimestampMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if getattr(self, "id", None) is None:
+            self.id = uuid4()
         if getattr(self, "is_active", None) is None:
             self.is_active = True
 
@@ -143,6 +145,8 @@ class Product(Base, TimestampMixin, TenantMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if getattr(self, "id", None) is None:
+            self.id = uuid4()
         if getattr(self, "is_available", None) is None:
             self.is_available = True
 
@@ -187,8 +191,12 @@ class InstagramUser(Base, TimestampMixin, TenantMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if getattr(self, "id", None) is None:
+            self.id = uuid4()
         if getattr(self, "is_business_user", None) is None:
             self.is_business_user = False
+        if getattr(self, "total_messages", None) is None:
+            self.total_messages = 0
 
 
 class Conversation(Base, TimestampMixin, TenantMixin):
