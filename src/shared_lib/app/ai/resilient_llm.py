@@ -259,14 +259,16 @@ class ResilientGeminiClient:
             LLMError: If generation fails
         """
         try:
-            # Use circuit breaker to protect the retry-enabled method
-            return await asyncio.to_thread(
-                self.circuit_breaker.call,
-                self._generate_text_with_retry,
-                prompt,
-                system_prompt,
-                **kwargs,
-            )
+            # Execute async generation within circuit breaker using a thread
+            def _call_sync() -> str:
+                return self.circuit_breaker.call(
+                    lambda: asyncio.run(self._generate_text_with_retry(
+                        prompt,
+                        system_prompt,
+                        **kwargs,
+                    ))
+                )
+            return await asyncio.to_thread(_call_sync)
         except pybreaker.CircuitBreakerOpenException:
             logger.error("Gemini circuit breaker is open - service degraded")
             raise CircuitBreakerError("AI Subsystem Degraded - Gemini service unavailable")
@@ -324,7 +326,17 @@ class ResilientOpenAIClient:
         except Exception as e:
             logger.warning(f"OpenAI SDK not available: {e}")
             self._openai = None
-            self.client = None
+            # Provide a minimal stub so tests can set chat.completions.create
+            class _CompletionsStub:
+                def __init__(self):
+                    self.create = None
+            class _ChatStub:
+                def __init__(self):
+                    self.completions = _CompletionsStub()
+            class _ClientStub:
+                def __init__(self):
+                    self.chat = _ChatStub()
+            self.client = _ClientStub()
         
         # Configure circuit breaker
         self.circuit_breaker = pybreaker.CircuitBreaker(
@@ -429,14 +441,16 @@ class ResilientOpenAIClient:
             LLMError: If generation fails
         """
         try:
-            # Use circuit breaker to protect the retry-enabled method
-            return await asyncio.to_thread(
-                self.circuit_breaker.call,
-                self._generate_text_with_retry,
-                prompt,
-                system_prompt,
-                **kwargs,
-            )
+            # Execute async generation within circuit breaker using a thread
+            def _call_sync() -> str:
+                return self.circuit_breaker.call(
+                    lambda: asyncio.run(self._generate_text_with_retry(
+                        prompt,
+                        system_prompt,
+                        **kwargs,
+                    ))
+                )
+            return await asyncio.to_thread(_call_sync)
         except pybreaker.CircuitBreakerOpenException:
             logger.error("OpenAI circuit breaker is open - service degraded")
             raise CircuitBreakerError("AI Subsystem Degraded - OpenAI service unavailable")

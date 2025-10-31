@@ -198,7 +198,7 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
                 status_code=503,
                 content={
                     "error": "Service temporarily unavailable",
-                    "message": "System is experiencing high load. Please try again later.",
+                    "message": "Service temporarily unavailable",
                     "retry_after": 30
                 },
                 headers={"Retry-After": "30"}
@@ -210,11 +210,9 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
     async def _is_system_overloaded(self) -> bool:
         """Check if system is overloaded based on queue lengths."""
         current_time = datetime.now()
-        
-        # Check if we need to refresh queue data
-        if (current_time - self.last_check).seconds >= self.check_interval or not self.queue_lengths:
-            await self._update_queue_lengths()
-            self.last_check = current_time
+        # Always refresh queue data to avoid stale overload state between tests/requests
+        await self._update_queue_lengths()
+        self.last_check = current_time
         
         # Check if any critical queue is overloaded
         for queue_name, length in self.queue_lengths.items():
@@ -247,10 +245,13 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
                     logger.debug(f"Updated queue lengths: {self.queue_lengths}")
                 else:
                     logger.error(f"Failed to get queue info: {response.status_code}")
+                    # Reset lengths on failure to avoid stale state
+                    self.queue_lengths = {}
                     
         except Exception as e:
             logger.error(f"Error updating queue lengths: {e}")
             # On error, assume system is healthy to avoid false positives
+            self.queue_lengths = {}
 
 
 class HealthCheckMiddleware(BaseHTTPMiddleware):

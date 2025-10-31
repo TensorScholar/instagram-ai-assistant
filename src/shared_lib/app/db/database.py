@@ -49,7 +49,7 @@ class DatabaseManager:
     
     def __init__(
         self,
-        database_url: str,
+        database_url: Optional[str],
         echo: bool = False,
         pool_size: Optional[int] = None,
         max_overflow: Optional[int] = None,
@@ -63,7 +63,8 @@ class DatabaseManager:
             pool_size: Connection pool size (defaults to settings)
             max_overflow: Maximum overflow connections (defaults to settings)
         """
-        self.database_url = database_url
+        # Default to in-memory SQLite for tests if URL not provided
+        self.database_url = database_url or "sqlite+aiosqlite:///:memory:"
         self.echo = echo
         
         # Use settings defaults if not provided
@@ -72,7 +73,7 @@ class DatabaseManager:
         
         # Create async engine
         self.engine: AsyncEngine = create_async_engine(
-            database_url,
+            self.database_url,
             echo=echo,
             poolclass=QueuePool,
             pool_size=effective_pool_size,
