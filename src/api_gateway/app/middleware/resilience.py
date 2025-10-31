@@ -38,6 +38,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         redis_db: int = 0,
         key_prefix: str = "ratelimit",
         trusted_proxy_headers: Optional[List[str]] = None,
+        trusted_proxy_subnets: Optional[List[str]] = None,
     ):
         super().__init__(app)
         self.requests_per_minute = requests_per_minute
@@ -47,6 +48,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self._cleanup_task = None
         self.key_prefix = key_prefix
         self.trusted_proxy_headers = trusted_proxy_headers or ["X-Forwarded-For"]
+        # Subnets that are allowed to set X-Forwarded-For (e.g., ingress/LB ranges)
+        self.trusted_proxy_subnets = [ipaddress.ip_network(s) for s in (trusted_proxy_subnets or [])]
         self._redis = None
         if use_redis and redis is not None and redis_host:
             try:
@@ -129,14 +132,35 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 self.requests.pop(client_ip, None)
 
     def _get_client_ip(self, request: Request) -> str:
-        # Prefer trusted proxy header if present
-        for header in self.trusted_proxy_headers:
-            xff = request.headers.get(header)
-            if xff:
-                # pick first IP
-                client = xff.split(",")[0].strip()
-                return client
-        return request.client.host if request.client else "unknown"
+        """Extract client IP safely.
+
+        If the immediate peer is within a trusted proxy subnet, honor
+        the first X-Forwarded-For entry when present and valid.
+        """
+        peer_ip = request.client.host if request.client else "unknown"
+        try:
+            peer_ip_obj = ipaddress.ip_address(peer_ip)
+        except Exception:
+            peer_ip_obj = None
+
+        peer_is_trusted = False
+        if peer_ip_obj and self.trusted_proxy_subnets:
+            peer_is_trusted = any(peer_ip_obj in subnet for subnet in self.trusted_proxy_subnets)
+
+        if peer_is_trusted:
+            for header in self.trusted_proxy_headers:
+                xff = request.headers.get(header)
+                if not xff:
+                    continue
+                first_ip = xff.split(",")[0].strip()
+                try:
+                    # Ensure it parses as an IP; do not allow private ranges here
+                    ip_obj = ipaddress.ip_address(first_ip)
+                    return first_ip
+                except Exception:
+                    continue
+
+        return peer_ip
 
 
 class BackPressureMiddleware(BaseHTTPMiddleware):
@@ -148,8 +172,8 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
         self, 
         app,
         rabbitmq_management_url: str = "http://rabbitmq:15672",
-        rabbitmq_username: str = "guest",
-        rabbitmq_password: str = "guest",
+        rabbitmq_username: Optional[str] = None,
+        rabbitmq_password: Optional[str] = None,
         critical_queue_length: int = 5000,
         warning_queue_length: int = 3000,
         check_interval: int = 30
@@ -205,10 +229,12 @@ class BackPressureMiddleware(BaseHTTPMiddleware):
         try:
             async with httpx.AsyncClient() as client:
                 # Get queue information
+                kwargs = {"timeout": 5.0}
+                if self.rabbitmq_username and self.rabbitmq_password:
+                    kwargs["auth"] = (self.rabbitmq_username, self.rabbitmq_password)
                 response = await client.get(
                     f"{self.rabbitmq_management_url}/api/queues",
-                    auth=(self.rabbitmq_username, self.rabbitmq_password),
-                    timeout=5.0
+                    **kwargs,
                 )
                 
                 if response.status_code == 200:
@@ -234,7 +260,7 @@ class HealthCheckMiddleware(BaseHTTPMiddleware):
     
     def __init__(self, app, health_paths: list = None):
         super().__init__(app)
-        self.health_paths = health_paths or ["/health", "/info", "/docs", "/redoc", "/openapi.json"]
+        self.health_paths = health_paths or ["/health", "/docs", "/redoc", "/openapi.json"]
     
     async def dispatch(self, request: Request, call_next):
         """Process request, bypassing middleware for health checks."""

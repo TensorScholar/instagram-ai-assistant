@@ -8,9 +8,10 @@ from typing import Any, Dict, Optional
 from uuid import UUID
 
 try:
-    import hvac
+    import hvac  # type: ignore
     HVAC_AVAILABLE = True
 except ImportError:
+    hvac = None  # type: ignore
     HVAC_AVAILABLE = False
 
 logger = logging.getLogger(__name__)

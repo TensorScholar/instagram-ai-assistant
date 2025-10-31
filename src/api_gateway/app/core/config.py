@@ -26,35 +26,36 @@ class Settings(BaseSettings):
     reload: bool = Field(default=True)
     
     # Database settings
-    database_url: str = Field()
+    database_url: Optional[str] = Field(default=None)
     postgres_host: str = Field(default="postgres")
     postgres_port: int = Field(default=5432)
     postgres_db: str = Field(default="aura_platform")
     postgres_user: str = Field(default="aura_user")
-    postgres_password: str = Field()
+    postgres_password: Optional[str] = Field(default=None)
     
     # Message queue settings
     rabbitmq_host: str = Field(default="rabbitmq")
     rabbitmq_port: int = Field(default=5672)
     rabbitmq_user: str = Field(default="aura_user")
-    rabbitmq_password: str = Field()
+    rabbitmq_password: Optional[str] = Field(default=None)
     rabbitmq_vhost: str = Field(default="aura_vhost")
     # RabbitMQ management API (for back-pressure)
     rabbitmq_mgmt_url: str = Field(default="http://rabbitmq:15672")
-    rabbitmq_mgmt_user: str = Field(default="guest")
-    rabbitmq_mgmt_password: str = Field(default="guest")
+    # For security, do not default to guest credentials; require explicit configuration
+    rabbitmq_mgmt_user: Optional[str] = Field(default=None)
+    rabbitmq_mgmt_password: Optional[str] = Field(default=None)
     
     # Security settings
-    secret_key: str = Field()
+    secret_key: Optional[str] = Field(default=None)
     jwt_algorithm: str = Field(default="HS256")
     jwt_access_token_expire_minutes: int = Field(
         default=30
     )
     
     # Instagram API settings
-    instagram_app_id: str = Field()
-    instagram_app_secret: str = Field()
-    instagram_webhook_verify_token: str = Field()
+    instagram_app_id: Optional[str] = Field(default=None)
+    instagram_app_secret: Optional[str] = Field(default=None)
+    instagram_webhook_verify_token: Optional[str] = Field(default=None)
     instagram_graph_api_version: str = Field(default="v18.0")
     
     # CORS settings
@@ -68,6 +69,9 @@ class Settings(BaseSettings):
     redis_port: int = Field(default=6379)
     redis_password: Optional[str] = Field(default=None)
     redis_db: int = Field(default=0)
+
+    # Proxy/middleware security
+    trusted_proxy_subnets: List[str] = Field(default_factory=list)
     
     # Logging settings
     log_level: str = Field(default="INFO")

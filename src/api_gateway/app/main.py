@@ -95,6 +95,7 @@ app.add_middleware(
     redis_port=settings.redis_port,
     redis_password=settings.redis_password,
     redis_db=settings.redis_db,
+    trusted_proxy_subnets=settings.trusted_proxy_subnets,
 )
 app.add_middleware(HealthCheckMiddleware)
 

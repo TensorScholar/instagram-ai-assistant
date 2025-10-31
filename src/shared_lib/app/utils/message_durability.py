@@ -9,9 +9,16 @@ from typing import Any, Dict, Optional, Union
 from uuid import UUID
 import json
 
-import pika
-from pika.exchange_type import ExchangeType
-from celery import Celery
+try:
+    import pika  # type: ignore
+    from pika.exchange_type import ExchangeType  # type: ignore
+except Exception:
+    pika = None  # type: ignore
+    ExchangeType = None  # type: ignore
+try:
+    from celery import Celery  # type: ignore
+except Exception:
+    Celery = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -55,6 +62,8 @@ class MessageDurabilityManager:
         Establish connection to RabbitMQ with durability settings.
         """
         try:
+            if pika is None:
+                raise RuntimeError("pika SDK not available")
             # Create connection parameters
             credentials = pika.PlainCredentials(
                 username=self.rabbitmq_username,
@@ -75,9 +84,12 @@ class MessageDurabilityManager:
             self.channel = self.connection.channel()
             
             # Enable publisher confirms
-            self.channel.confirm_delivery()
+            if hasattr(self.channel, "confirm_delivery"):
+                self.channel.confirm_delivery()
             
             # Declare dead-letter exchange
+            if ExchangeType is None:
+                raise RuntimeError("pika ExchangeType not available")
             self.channel.exchange_declare(
                 exchange="dlx",
                 exchange_type=ExchangeType.direct,
@@ -262,7 +274,7 @@ class MessageDurabilityManager:
             logger.error(f"Failed to publish message with confirm: {e}")
             return False
     
-    async def setup_celery_durability(self, celery_app: Celery) -> None:
+    async def setup_celery_durability(self, celery_app: Any) -> None:
         """
         Configure Celery for message durability.
         
@@ -270,6 +282,9 @@ class MessageDurabilityManager:
             celery_app: Celery application instance
         """
         try:
+            if Celery is None:
+                logger.warning("Celery not available; skipping Celery durability configuration")
+                return
             # Configure Celery for durability
             celery_app.conf.update(
                 # Broker settings

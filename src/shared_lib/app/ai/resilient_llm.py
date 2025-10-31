@@ -11,9 +11,6 @@ import asyncio
 import logging
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID
-
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -25,7 +22,6 @@ from tenacity import (
 import pybreaker
 from circuitbreaker import CircuitBreakerError
 import httpx
-import openai
 
 from .embeddings import EmbeddingGenerator, EmbeddingConfig, EmbeddingModel
 from ..schemas.models import Product, Conversation, Message
@@ -105,9 +101,16 @@ class ResilientGeminiClient:
         self.timeout = timeout
         self.max_retries = max_retries
         
-        # Configure Gemini
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
+        # Configure Gemini (import lazily to avoid hard dependency at import time)
+        try:
+            import google.generativeai as genai  # type: ignore
+            genai.configure(api_key=api_key)
+            self._genai = genai
+            self.model = genai.GenerativeModel(model_name)
+        except Exception as e:
+            logger.warning(f"Gemini SDK not available: {e}")
+            self._genai = None
+            self.model = None
         
         # Configure aggressive HTTP client with separate timeouts
         self.http_client = httpx.AsyncClient(
@@ -123,12 +126,6 @@ class ResilientGeminiClient:
         self.circuit_breaker = pybreaker.CircuitBreaker(
             fail_max=circuit_breaker_failure_threshold,
             reset_timeout=circuit_breaker_recovery_timeout,
-            expected_exception=(
-                LLMError,
-                httpx.TimeoutException,
-                httpx.ConnectError,
-                httpx.HTTPStatusError,
-            ),
         )
         
         logger.info(f"ResilientGeminiClient initialized with model {model_name}")
@@ -195,7 +192,9 @@ class ResilientGeminiClient:
                 full_prompt = f"{system_prompt}\n\n{prompt}"
             
             # Configure generation parameters
-            generation_config = genai.types.GenerationConfig(
+            if not self._genai or not self.model:
+                raise LLMServiceUnavailableError("Gemini SDK not available")
+            generation_config = self._genai.types.GenerationConfig(
                 temperature=self.temperature,
                 max_output_tokens=self.max_tokens,
                 **kwargs,
@@ -306,17 +305,23 @@ class ResilientOpenAIClient:
         self.timeout = timeout
         self.max_retries = max_retries
         
-        # Configure OpenAI client
-        self.client = openai.AsyncOpenAI(
-            api_key=api_key,
-            timeout=timeout,
-        )
+        # Configure OpenAI client (import lazily to avoid hard dependency at import time)
+        try:
+            import openai  # type: ignore
+            self._openai = openai
+            self.client = openai.AsyncOpenAI(
+                api_key=api_key,
+                timeout=timeout,
+            )
+        except Exception as e:
+            logger.warning(f"OpenAI SDK not available: {e}")
+            self._openai = None
+            self.client = None
         
         # Configure circuit breaker
         self.circuit_breaker = pybreaker.CircuitBreaker(
             fail_max=circuit_breaker_failure_threshold,
             reset_timeout=circuit_breaker_recovery_timeout,
-            expected_exception=LLMError,
         )
         
         logger.info(f"ResilientOpenAIClient initialized with model {model_name}")
@@ -325,13 +330,12 @@ class ResilientOpenAIClient:
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=4, max=10),
         retry=retry_if_exception_type((
-            openai.RateLimitError,
-            openai.APITimeoutError,
-            openai.APIConnectionError,
-            openai.InternalServerError,
             LLMTimeoutError,
             LLMRateLimitError,
             LLMServiceUnavailableError,
+            httpx.TimeoutException,
+            httpx.ConnectError,
+            httpx.HTTPStatusError,
         )),
         before_sleep=before_sleep_log(logger, logging.WARNING),
         after=after_log(logger, logging.INFO),
@@ -364,6 +368,8 @@ class ResilientOpenAIClient:
             messages.append({"role": "user", "content": prompt})
             
             # Generate response
+            if not self.client:
+                raise LLMServiceUnavailableError("OpenAI SDK not available")
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
@@ -382,13 +388,13 @@ class ResilientOpenAIClient:
             logger.error(f"OpenAI generation failed: {e}")
             
             # Convert to appropriate exception type
-            if isinstance(e, openai.APITimeoutError):
+            if self._openai and isinstance(e, self._openai.APITimeoutError):
                 raise LLMTimeoutError(f"OpenAI request timed out: {e}")
-            elif isinstance(e, openai.RateLimitError):
+            elif self._openai and isinstance(e, self._openai.RateLimitError):
                 raise LLMRateLimitError(f"OpenAI rate limit exceeded: {e}")
-            elif isinstance(e, openai.InternalServerError):
+            elif self._openai and isinstance(e, self._openai.InternalServerError):
                 raise LLMServiceUnavailableError(f"OpenAI service unavailable: {e}")
-            elif isinstance(e, openai.APIConnectionError):
+            elif self._openai and isinstance(e, self._openai.APIConnectionError):
                 raise LLMServiceUnavailableError(f"OpenAI connection error: {e}")
             else:
                 raise LLMError(f"OpenAI generation error: {e}")

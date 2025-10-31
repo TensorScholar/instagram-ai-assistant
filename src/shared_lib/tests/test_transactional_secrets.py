@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4, UUID
 
 from shared_lib.app.db.database import transactional, TransactionalContext
+from sqlalchemy.ext.asyncio import AsyncSession
 from shared_lib.app.utils.secrets import TenantSecretsManager, create_secrets_manager
 from shared_lib.app.utils.security import initialize_security, get_data_encryption
 import os

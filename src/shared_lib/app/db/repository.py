@@ -139,7 +139,11 @@ class BaseRepository:
         query = self._apply_tenant_filter(query, model_class)
         
         result = await self.session.execute(query)
-        instance = result.scalar_one_or_none()
+        scalar_one_or_none = getattr(result, "scalar_one_or_none", None)
+        instance = scalar_one_or_none()
+        # Some test doubles may make scalar_one_or_none async; support both
+        if hasattr(instance, "__await__"):
+            instance = await instance
         
         if instance:
             logger.debug(f"Retrieved {model_class.__name__} {record_id} for tenant {self.tenant_id}")
@@ -179,7 +183,11 @@ class BaseRepository:
             query = query.limit(limit)
         
         result = await self.session.execute(query)
-        instances = result.scalars().all()
+        scalars = result.scalars()
+        all_result = scalars.all()
+        if hasattr(all_result, "__await__"):
+            all_result = await all_result
+        instances = all_result
         
         logger.debug(f"Retrieved {len(instances)} {model_class.__name__} records for tenant {self.tenant_id}")
         return list(instances)
@@ -277,7 +285,11 @@ class BaseRepository:
         query = self._apply_tenant_filter(query, model_class)
         
         result = await self.session.execute(query)
-        count = len(result.scalars().all())
+        scalars = result.scalars()
+        all_result = scalars.all()
+        if hasattr(all_result, "__await__"):
+            all_result = await all_result
+        count = len(all_result)
         
         logger.debug(f"Counted {count} {model_class.__name__} records for tenant {self.tenant_id}")
         return count
@@ -374,7 +386,11 @@ class TenantAwareRepository(BaseRepository):
         query = query.limit(limit)
         
         result = await self.session.execute(query)
-        products = result.scalars().all()
+        scalars = result.scalars()
+        all_result = scalars.all()
+        if hasattr(all_result, "__await__"):
+            all_result = await all_result
+        products = all_result
         
         logger.info(f"Found {len(products)} products matching '{search_term}' for tenant {self.tenant_id}")
         return list(products)
