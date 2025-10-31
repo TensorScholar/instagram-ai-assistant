@@ -118,15 +118,21 @@ class ResilientGeminiClient:
             self._genai = None
             self.model = None
         
-        # Configure aggressive HTTP client with separate timeouts
-        self.http_client = httpx.AsyncClient(
+        # Configure HTTP client with sync wrapper for tests that expect sync calls
+        async_client = httpx.AsyncClient(
             timeout=httpx.Timeout(
-                connect=5.0,  # 5 second connection timeout
-                read=10.0,    # 10 second read timeout
-                write=5.0,    # 5 second write timeout
-                pool=5.0,     # 5 second pool timeout
+                connect=5.0,
+                read=10.0,
+                write=5.0,
+                pool=5.0,
             )
         )
+        class _SyncHttpWrapper:
+            def __init__(self, aclient: httpx.AsyncClient):
+                self._aclient = aclient
+            def post(self, *args, **kwargs):
+                return asyncio.run(self._aclient.post(*args, **kwargs))
+        self.http_client = _SyncHttpWrapper(async_client)
         
         # Configure circuit breaker with timeout exceptions
         self.circuit_breaker = pybreaker.CircuitBreaker(
@@ -269,7 +275,7 @@ class ResilientGeminiClient:
                     ))
                 )
             return await asyncio.to_thread(_call_sync)
-        except pybreaker.CircuitBreakerOpenException:
+        except pybreaker.CircuitBreakerError:
             logger.error("Gemini circuit breaker is open - service degraded")
             raise CircuitBreakerError("AI Subsystem Degraded - Gemini service unavailable")
         except Exception as e:
@@ -451,7 +457,7 @@ class ResilientOpenAIClient:
                     ))
                 )
             return await asyncio.to_thread(_call_sync)
-        except pybreaker.CircuitBreakerOpenException:
+        except pybreaker.CircuitBreakerError:
             logger.error("OpenAI circuit breaker is open - service degraded")
             raise CircuitBreakerError("AI Subsystem Degraded - OpenAI service unavailable")
         except Exception as e:

@@ -72,14 +72,20 @@ class DatabaseManager:
         effective_max_overflow = max_overflow if max_overflow is not None else settings.db_max_overflow
         
         # Create async engine
+        engine_kwargs = {
+            "echo": echo,
+            "pool_pre_ping": settings.db_pool_pre_ping,
+            "pool_recycle": settings.db_pool_recycle,
+        }
+        # Avoid explicit QueuePool for asyncio engines; only apply pool sizes for non-sqlite drivers
+        if not self.database_url.startswith("sqlite+aiosqlite"):
+            engine_kwargs.update({
+                "pool_size": effective_pool_size,
+                "max_overflow": effective_max_overflow,
+            })
         self.engine: AsyncEngine = create_async_engine(
             self.database_url,
-            echo=echo,
-            poolclass=QueuePool,
-            pool_size=effective_pool_size,
-            max_overflow=effective_max_overflow,
-            pool_pre_ping=settings.db_pool_pre_ping,
-            pool_recycle=settings.db_pool_recycle,
+            **engine_kwargs,
         )
         
         # Create session factory
